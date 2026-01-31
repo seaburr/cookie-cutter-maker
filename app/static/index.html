@@ -72,19 +72,27 @@
     .preview { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .pane { background:#0b0f14; border:1px solid #1f2a37; border-radius: 14px; overflow:hidden; min-height: 320px; }
     .pane header { padding:12px 14px; border-bottom:1px solid #1f2a37; font-size:12px; color:#9fb0c2; text-align:left; letter-spacing:0.2px; }
-    .pane .content { padding:16px; min-height:320px; height:100%; box-sizing:border-box; }
-    .pane.media .content { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:12px; }
+    .pane .content { padding:16px; min-height:340px; height:100%; box-sizing:border-box; }
+    .pane.media .content { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:12px; width:100%; }
     .pane.text .content { display:block; text-align:left; padding-right:12px; padding-left:12px; }
     .pane img, .pane iframe { width:100%; max-width:420px; aspect-ratio:1/1; height:auto; border:0; background:white; border-radius:12px; object-fit: contain; box-shadow:0 12px 30px rgba(0,0,0,0.35); }
-    #stlCanvas { width:100%; max-width:420px; aspect-ratio:1/1; height:420px; border-radius:12px; background:#0d1117; box-shadow:0 12px 30px rgba(0,0,0,0.35); }
+    #pngPreview, #svgPreview { width:100%; max-width:520px; aspect-ratio:1/1; background:white; border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; overflow:hidden; color:#0d1117; padding:6px; box-sizing:border-box; }
+    #pngPreview img, #svgPreview img { width:100%; height:100%; object-fit:contain; border:0; }
+    #svgPreview iframe { width:100%; height:100%; border:0; }
+    #stlCanvas { width:100%; max-width:none; aspect-ratio: 16 / 10; min-height: 420px; height: clamp(420px, 70vw, 640px); border-radius:12px; background:#0d1117; box-shadow:0 12px 30px rgba(0,0,0,0.35); }
     #stlStatus { font-size:12px; color:#9fb0c2; text-align:center; margin-top:auto; min-height:16px; display:flex; align-items:center; justify-content:center; width:100%; }
     .links a { color:#7ee787; text-decoration:none; display:block; margin-top:6px; }
     .small { font-size: 12px; color:#9fb0c2; line-height:1.4; }
     .tabs { display:flex; gap:8px; margin-bottom: 10px; }
     .tab { flex:1; padding:10px; border-radius:12px; border:1px solid #1f2a37; background:#0b0f14; color:#c9d1d9; cursor:pointer; font-weight:600; }
     .tab.active { background:#162235; border-color:#2b3b4f; color:#e6edf3;}
-    .step-grid { display:grid; grid-template-columns: minmax(440px, 1.2fr) 380px 260px; gap:24px; align-items:start; }
-    .step3-grid { grid-template-columns: minmax(440px, 1.3fr) 420px; }
+    .step-grid { display:grid; grid-template-columns: minmax(420px, 1.15fr) 460px 240px; gap:20px; align-items:start; }
+    .step3-grid { grid-template-columns: 340px 1fr; align-items:stretch; }
+    .stl-controls { display:flex; flex-direction:column; gap:10px; }
+    .stl-controls .row { flex-direction:column; gap:10px; }
+    .stl-controls .row > div { flex: none; }
+    .stl-controls input[type="range"] { height:6px; }
+    .stl-controls label { margin-top: 6px; }
   </style>
 </head>
 <body>
@@ -174,7 +182,7 @@
   </div>
 
   <div class="card step-grid step3-grid">
-    <div>
+    <div class="stl-controls">
       <h2>Step 3: STL settings</h2>
 
       <div class="row">
@@ -270,12 +278,14 @@
   function initStlViewer() {
     const canvas = document.getElementById('stlCanvas');
     if (!canvas) return;
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight || Math.round(canvas.clientWidth * 0.625);
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    renderer.setSize(canvas.clientWidth, canvas.clientWidth, false);
+    renderer.setSize(w, h, false);
     renderer.setPixelRatio(window.devicePixelRatio || 1);
 
     scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+    camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 1000);
     camera.position.set(0, 0, 120);
 
     controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -300,9 +310,10 @@
 
     window.addEventListener('resize', () => {
       if (!renderer || !camera) return;
-      const size = canvas.clientWidth;
-      renderer.setSize(size, size, false);
-      camera.aspect = 1;
+      const sizeW = canvas.clientWidth;
+      const sizeH = canvas.clientHeight || Math.round(sizeW * 0.625);
+      renderer.setSize(sizeW, sizeH, false);
+      camera.aspect = sizeW / sizeH;
       camera.updateProjectionMatrix();
     });
   }
@@ -398,10 +409,10 @@
     console.log('updatePreviews payload:', obj);
     if (obj?.png) {
       lastPngUrl = obj.png;
-      $('pngPreview').innerHTML = `<img src="${obj.png}" style="max-width:100%;border-radius:10px;background:white;padding:4px;">`;
+      $('pngPreview').innerHTML = `<img src="${obj.png}" alt="PNG preview">`;
     }
     if (obj?.svg) {
-      $('svgPreview').innerHTML = `<iframe src="${obj.svg}"></iframe>`;
+      $('svgPreview').innerHTML = `<iframe src="${obj.svg}" aria-label="SVG preview"></iframe>`;
     }
     if (obj?.stl && typeof window.loadStl === 'function') {
       window.loadStl(obj.stl);
@@ -479,7 +490,7 @@
         setStatus('Outline loaded from PNG.');
         setLinks(data);
         if (data.svg) {
-          $('svgPreview').innerHTML = `<iframe src="${data.svg}" style="width:100%;height:320px;border:0;background:white;border-radius:10px;"></iframe>`;
+          $('svgPreview').innerHTML = `<iframe src="${data.svg}" aria-label="SVG preview"></iframe>`;
         }
       } else {
         const prompt = $('prompt').value.trim();
