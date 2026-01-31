@@ -1,0 +1,11 @@
+numpy
+pillow
+scikit-image
+shapely
+trimesh
+mapbox_earcut
+python-dotenv
+openai
+fastapi
+uvicorn[standard]
+python-multipart

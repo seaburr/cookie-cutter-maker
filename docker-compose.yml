@@ -1,0 +1,14 @@
+name: cookie-cutter-maker
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      PIPELINE_OUTPUT_DIR: /app/output
+      # Optional: enable prompt->outline generation
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    volumes:
+      - ./output:/app/output
+      - ./examples:/app/examples
