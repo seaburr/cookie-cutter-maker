@@ -6,17 +6,21 @@
   <title>Cookie Cutter Maker</title>
   <style>
     body, button, input, textarea, select { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
-    body { margin: 0; background: #0b0f14; color: #e6edf3; }
-    header { padding: 20px 24px; border-bottom: 1px solid #1f2a37; display:flex; align-items:center; justify-content:space-between;}
-    main { display:flex; flex-direction:column; gap: 24px; padding: 16px; max-width: 1180px; margin: 0 auto; }
-    .card { background: #0f1620; border: 1px solid #1f2a37; border-radius: 14px; padding: 16px; }
-    h2 { margin: 0 0 10px 0; font-size: 18px; font-weight:800; }
-    label { display:block; font-size: 12px; color:#9fb0c2; margin-top: 12px; margin-bottom:6px; }
-    input[type="text"], textarea { width:100%; background:#0b0f14; border:1px solid #243244; color:#e6edf3; border-radius:10px; padding:10px; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at 15% 15%, #111926 0%, #0b0f14 32%, #0a0d13 100%);
+      color: #e6edf3;
+    }
+    header { padding: 24px 28px; border-bottom: 1px solid #1f2a37; display:flex; align-items:center; justify-content:space-between;}
+    main { display:flex; flex-direction:column; gap: 28px; padding: 16px; max-width: 1280px; margin: 0 auto; }
+    .card { background: linear-gradient(145deg, #0f1824, #0c121a); border: 1px solid #1f2a37; border-radius: 16px; padding: 18px; box-shadow: 0 16px 40px rgba(0,0,0,0.35); }
+    h2 { margin: 0 0 12px 0; font-size: 18px; font-weight:800; letter-spacing: 0.2px; }
+    label { display:block; font-size: 12px; color:#9fb0c2; margin-top: 12px; margin-bottom:6px; letter-spacing: 0.1px; }
+    input[type="text"], textarea { width:100%; background:#0b0f14; border:1px solid #243244; color:#e6edf3; border-radius:12px; padding:12px; }
     .short-input { width:80%; max-width:420px; }
-    input[type="file"] { width:100%; color:#e6edf3; background:#0b0f14; border:1px solid #243244; border-radius:10px; padding:10px; cursor:pointer; }
-    input[type="file"]::file-selector-button { background:#223043; color:#e6edf3; border:0; border-radius:8px; padding:8px 12px; margin-right:10px; cursor:pointer; font-weight:700; }
-    input[type="file"]:hover::file-selector-button { background:#1f6feb; }
+    input[type="file"] { width:100%; color:#e6edf3; background:#0b0f14; border:1px solid #243244; border-radius:12px; padding:12px; cursor:pointer; }
+    input[type="file"]::file-selector-button { background:#223043; color:#e6edf3; border:0; border-radius:10px; padding:10px 14px; margin-right:12px; cursor:pointer; font-weight:700; }
+    input[type="file"]::file-selector-button:hover { background:#1f6feb; }
     .row { display:flex; gap:10px; }
     .row > div { flex:1; }
     input[type="range"] { width:100%; }
@@ -60,23 +64,27 @@
       z-index:10;
     }
     .tip:hover::after, .tip:hover::before { opacity:1; }
-    button { width:100%; margin-top:12px; background:#223043; border:0; color:white; padding:10px 12px; border-radius:12px; font-weight:600; cursor:pointer; transition:background 120ms ease-out; }
+    button { width:100%; margin-top:12px; background:#223043; border:0; color:white; padding:12px 14px; border-radius:12px; font-weight:700; cursor:pointer; transition:background 120ms ease-out, transform 120ms ease-out; letter-spacing:0.1px; }
     button.secondary { background:#223043; }
-    button:hover { background:#1f6feb; }
+    button:hover { background:#1f6feb; transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
     button:disabled { opacity:.6; cursor:not-allowed; }
     .preview { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .pane { background:#0b0f14; border:1px solid #1f2a37; border-radius: 14px; overflow:hidden; min-height: 320px; }
-    .pane header { padding:10px 12px; border-bottom:1px solid #1f2a37; font-size:12px; color:#9fb0c2; text-align:left; }
-    .pane .content { padding:16px; min-height:320px; }
-    .pane.media .content { display:flex; align-items:center; justify-content:center; }
+    .pane header { padding:12px 14px; border-bottom:1px solid #1f2a37; font-size:12px; color:#9fb0c2; text-align:left; letter-spacing:0.2px; }
+    .pane .content { padding:16px; min-height:320px; height:100%; box-sizing:border-box; }
+    .pane.media .content { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:12px; }
     .pane.text .content { display:block; text-align:left; padding-right:12px; padding-left:12px; }
-    .pane img, .pane iframe { width:100%; max-width:420px; aspect-ratio:1/1; height:auto; border:0; background:white; border-radius:10px; object-fit: contain; }
+    .pane img, .pane iframe { width:100%; max-width:420px; aspect-ratio:1/1; height:auto; border:0; background:white; border-radius:12px; object-fit: contain; box-shadow:0 12px 30px rgba(0,0,0,0.35); }
+    #stlCanvas { width:100%; max-width:420px; aspect-ratio:1/1; height:420px; border-radius:12px; background:#0d1117; box-shadow:0 12px 30px rgba(0,0,0,0.35); }
+    #stlStatus { font-size:12px; color:#9fb0c2; text-align:center; margin-top:auto; min-height:16px; display:flex; align-items:center; justify-content:center; width:100%; }
     .links a { color:#7ee787; text-decoration:none; display:block; margin-top:6px; }
     .small { font-size: 12px; color:#9fb0c2; line-height:1.4; }
     .tabs { display:flex; gap:8px; margin-bottom: 10px; }
     .tab { flex:1; padding:10px; border-radius:12px; border:1px solid #1f2a37; background:#0b0f14; color:#c9d1d9; cursor:pointer; font-weight:600; }
     .tab.active { background:#162235; border-color:#2b3b4f; color:#e6edf3;}
     .step-grid { display:grid; grid-template-columns: minmax(440px, 1.2fr) 380px 260px; gap:24px; align-items:start; }
+    .step3-grid { grid-template-columns: minmax(440px, 1.3fr) 420px; }
   </style>
 </head>
 <body>
@@ -165,59 +173,185 @@
     </div>
   </div>
 
-  <div class="card">
-    <h2>Step 3: STL settings</h2>
+  <div class="card step-grid step3-grid">
+    <div>
+      <h2>Step 3: STL settings</h2>
 
-    <div class="row">
-      <div>
-        <label>Width (mm): <span id="widthVal">95</span> <span class="tip" data-tip="Overall cutter width across its widest point.">?</span></label>
-        <input id="width" type="range" min="40" max="160" value="95" step="1"/>
+      <div class="row">
+        <div>
+          <label>Width (mm): <span id="widthVal">95</span> <span class="tip" data-tip="Overall cutter width across its widest point.">?</span></label>
+          <input id="width" type="range" min="40" max="160" value="95" step="1"/>
+        </div>
+        <div>
+          <label>Wall (mm): <span id="wallVal">1.0</span> <span class="tip" data-tip="Thickness of the cutting wall. Increase to strengthen thin shapes.">?</span></label>
+          <input id="wall" type="range" min="0.8" max="2.0" value="1.0" step="0.1"/>
+        </div>
       </div>
-      <div>
-        <label>Wall (mm): <span id="wallVal">1.0</span> <span class="tip" data-tip="Thickness of the cutting wall. Increase to strengthen thin shapes.">?</span></label>
-        <input id="wall" type="range" min="0.8" max="2.0" value="1.0" step="0.1"/>
+
+      <div class="row">
+        <div>
+          <label>Total height (mm): <span id="heightVal">28</span> <span class="tip" data-tip="Overall wall height of the cutter.">?</span></label>
+          <input id="height" type="range" min="16" max="40" value="28" step="1"/>
+        </div>
+        <div>
+          <label>Flange height (mm): <span id="flangeHVal">7.226</span> <span class="tip" data-tip="How tall the grip flange is above the cutting edge.">?</span></label>
+          <input id="flangeH" type="range" min="3" max="14" value="7.226" step="0.1"/>
+        </div>
+      </div>
+
+      <label>Flange outward (mm): <span id="flangeOutVal">6</span> <span class="tip" data-tip="How far the grip flange sticks out horizontally.">?</span></label>
+      <input id="flangeOut" type="range" min="0" max="12" value="6" step="0.5"/>
+
+      <div class="row">
+        <div>
+          <label>Cleanup (mm): <span id="cleanupVal">0.5</span> <span class="tip" data-tip="Morphological smoothing to remove tiny zig-zags or noise before offsetting.">?</span></label>
+          <input id="cleanup" type="range" min="0" max="2" value="0.5" step="0.1"/>
+        </div>
+        <div>
+          <label>Tip smoothing (mm): <span id="tipSmoothVal">0.6</span> <span class="tip" data-tip="Rounds sharp corners so inner offsets don’t collapse to paper-thin walls.">?</span></label>
+          <input id="tipSmooth" type="range" min="0" max="2" value="0.6" step="0.05"/>
+        </div>
+        <div>
+          <label>Keep holes <span class="tip" data-tip="Preserve interior holes instead of filling them before offsetting.">?</span></label>
+          <input id="keepHoles" type="checkbox" />
+        </div>
+      </div>
+      <label>Min island area (mm²): <span id="areaVal">25</span> <span class="tip" data-tip="Discard tiny disconnected islands below this area to avoid fragile crumbs.">?</span></label>
+      <input id="area" type="range" min="1" max="200" value="25" step="1"/>
+
+      <button id="btnRun" type="button">Generate STL</button>
+      <div id="status" class="small" style="margin-top:10px;"></div>
+      <div class="links" id="links"></div>
+    </div>
+    <div class="pane media">
+      <header>STL Preview</header>
+      <div class="content">
+        <canvas id="stlCanvas"></canvas>
+        <div id="stlStatus" class="small">Generate STL to preview.</div>
       </div>
     </div>
-
-    <div class="row">
-      <div>
-        <label>Total height (mm): <span id="heightVal">28</span> <span class="tip" data-tip="Overall wall height of the cutter.">?</span></label>
-        <input id="height" type="range" min="16" max="40" value="28" step="1"/>
-      </div>
-      <div>
-        <label>Flange height (mm): <span id="flangeHVal">7.226</span> <span class="tip" data-tip="How tall the grip flange is above the cutting edge.">?</span></label>
-        <input id="flangeH" type="range" min="3" max="14" value="7.226" step="0.1"/>
-      </div>
-    </div>
-
-    <label>Flange outward (mm): <span id="flangeOutVal">6</span> <span class="tip" data-tip="How far the grip flange sticks out horizontally.">?</span></label>
-    <input id="flangeOut" type="range" min="0" max="12" value="6" step="0.5"/>
-
-    <div class="row">
-      <div>
-        <label>Cleanup (mm): <span id="cleanupVal">0.5</span> <span class="tip" data-tip="Morphological smoothing to remove tiny zig-zags or noise before offsetting.">?</span></label>
-        <input id="cleanup" type="range" min="0" max="2" value="0.5" step="0.1"/>
-      </div>
-      <div>
-        <label>Tip smoothing (mm): <span id="tipSmoothVal">0.6</span> <span class="tip" data-tip="Rounds sharp corners so inner offsets don’t collapse to paper-thin walls.">?</span></label>
-        <input id="tipSmooth" type="range" min="0" max="2" value="0.6" step="0.05"/>
-      </div>
-      <div>
-        <label>Keep holes <span class="tip" data-tip="Preserve interior holes instead of filling them before offsetting.">?</span></label>
-        <input id="keepHoles" type="checkbox" />
-      </div>
-    </div>
-    <label>Min island area (mm²): <span id="areaVal">25</span> <span class="tip" data-tip="Discard tiny disconnected islands below this area to avoid fragile crumbs.">?</span></label>
-    <input id="area" type="range" min="1" max="200" value="25" step="1"/>
-
-    <button id="btnRun" type="button">Generate STL</button>
-    <div id="status" class="small" style="margin-top:10px;"></div>
-    <div class="links" id="links"></div>
   </div>
 
 </main>
 
 <script>
+  // Lightweight STL viewer via Three.js + STLLoader.
+  // Tries local copies in /static first; falls back to CDN if not present.
+  let renderer, scene, camera, controls, stlMesh;
+  async function ensureThree() {
+    if (window.THREE && window.STLLoader && window.OrbitControls) return;
+    const localLibs = [
+      "/static/three.min.js",
+      "/static/STLLoader.js",
+      "/static/OrbitControls.js",
+    ];
+    const cdnLibs = [
+      "https://unpkg.com/three@0.158.0/build/three.min.js",
+      "https://unpkg.com/three@0.158.0/examples/js/loaders/STLLoader.js",
+      "https://unpkg.com/three@0.158.0/examples/js/controls/OrbitControls.js",
+    ];
+    const tryLoad = (src) =>
+      new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = src;
+        s.crossOrigin = "anonymous";
+        s.onload = resolve;
+        s.onerror = () => reject(new Error("Failed to load " + src));
+        document.head.appendChild(s);
+      });
+    try {
+      for (const src of localLibs) await tryLoad(src);
+    } catch (e) {
+      // fallback to CDN
+      for (const src of cdnLibs) await tryLoad(src);
+    }
+  }
+
+  function initStlViewer() {
+    const canvas = document.getElementById('stlCanvas');
+    if (!canvas) return;
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setSize(canvas.clientWidth, canvas.clientWidth, false);
+    renderer.setPixelRatio(window.devicePixelRatio || 1);
+
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+    camera.position.set(0, 0, 120);
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    const light = new THREE.HemisphereLight(0xffffff, 0x222233, 1.1);
+    scene.add(light);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+    dir.position.set(60, 80, 100);
+    scene.add(dir);
+
+    const grid = new THREE.GridHelper(160, 8, 0x334155, 0x1e293b);
+    grid.position.y = -40;
+    scene.add(grid);
+
+    const animate = () => {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    window.addEventListener('resize', () => {
+      if (!renderer || !camera) return;
+      const size = canvas.clientWidth;
+      renderer.setSize(size, size, false);
+      camera.aspect = 1;
+      camera.updateProjectionMatrix();
+    });
+  }
+
+  window.loadStl = async (url) => {
+    try {
+      const status = document.getElementById('stlStatus');
+      if (status) status.textContent = 'Loading STL viewer...';
+      await ensureThree();
+      if (!renderer) initStlViewer();
+      if (status) status.textContent = 'Loading STL mesh...';
+      console.log('loadStl fetching', url);
+      const loader = new THREE.STLLoader();
+      loader.load(url, (geom) => {
+        console.log('loadStl success', url);
+        if (stlMesh) {
+          scene.remove(stlMesh);
+          stlMesh.geometry.dispose();
+        }
+        geom.computeBoundingBox();
+        const mat = new THREE.MeshStandardMaterial({ color: 0x8ab4f8, metalness: 0.1, roughness: 0.35 });
+        stlMesh = new THREE.Mesh(geom, mat);
+        scene.add(stlMesh);
+
+        const bbox = geom.boundingBox;
+        const size = bbox.getSize(new THREE.Vector3());
+        const center = bbox.getCenter(new THREE.Vector3());
+        stlMesh.position.sub(center);
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const camDist = maxDim * 1.6;
+        camera.position.set(camDist, camDist, camDist);
+        camera.lookAt(0,0,0);
+        controls.target.set(0,0,0);
+        controls.update();
+
+        const status = document.getElementById('stlStatus');
+        if (status) status.textContent = 'Drag to orbit • Scroll to zoom';
+      }, undefined, (err) => {
+        const status = document.getElementById('stlStatus');
+        if (status) status.textContent = 'Failed to load STL';
+        console.error(err);
+      });
+    } catch (e) {
+      const status = document.getElementById('stlStatus');
+      if (status) status.textContent = 'Viewer failed to load';
+      console.error('loadStl error', e);
+    }
+  };
+
   const $ = (id) => document.getElementById(id);
 
   function bindRange(id, outId, fmt=(v)=>v) {
@@ -261,12 +395,16 @@
 
   function setStatus(msg) { $('status').textContent = msg; }
   function updatePreviews(obj) {
+    console.log('updatePreviews payload:', obj);
     if (obj?.png) {
       lastPngUrl = obj.png;
       $('pngPreview').innerHTML = `<img src="${obj.png}" style="max-width:100%;border-radius:10px;background:white;padding:4px;">`;
     }
     if (obj?.svg) {
       $('svgPreview').innerHTML = `<iframe src="${obj.svg}"></iframe>`;
+    }
+    if (obj?.stl && typeof window.loadStl === 'function') {
+      window.loadStl(obj.stl);
     }
   }
   function setLinks(obj) {
