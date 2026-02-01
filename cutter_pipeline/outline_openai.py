@@ -3,6 +3,8 @@ import os
 from pathlib import Path
 from openai import OpenAI
 
+IMAGE_MODEL = "gpt-image-1-mini"
+
 def generate_outline_png(prompt: str, out_path: str, size: str = "1024x1024") -> str:
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
@@ -17,7 +19,7 @@ def generate_outline_png(prompt: str, out_path: str, size: str = "1024x1024") ->
     )
 
     result = client.images.generate(
-        model="gpt-image-1",
+        model=IMAGE_MODEL,
         prompt=full_prompt,
         size=size,
     )
