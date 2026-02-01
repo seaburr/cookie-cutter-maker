@@ -22,6 +22,13 @@ Open:
 
 Generated files land in `./output/<job_id>/`.
 
+## Run tests
+
+```bash
+pip install -r requirements.txt
+pytest
+```
+
 ## License
 
 MIT License © seaburr
