@@ -2,12 +2,15 @@ import os
 import uuid
 import json
 import logging
+import time
 from typing import Any
 from pathlib import Path
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+import anyio
 
 from cutter_pipeline.trace_outline import trace_png_to_polygon
 from cutter_pipeline.stl_cutter import polygon_to_cookie_cutter_stl
@@ -30,6 +33,50 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+# Prometheus metrics
+REQUEST_COUNT = Counter(
+    "http_requests_total",
+    "Total HTTP requests",
+    ["method", "path", "status"],
+)
+REQUEST_LATENCY = Histogram(
+    "http_request_duration_seconds",
+    "HTTP request latency",
+    ["method", "path", "status"],
+    buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 4, 8, 16),
+)
+OPENAI_INFLIGHT = Gauge(
+    "openai_generate_inflight",
+    "Number of in-flight OpenAI image generation calls",
+)
+
+
+@app.middleware("http")
+async def _metrics_middleware(request: Request, call_next):
+    # Skip metrics endpoint itself to avoid recursion.
+    if request.url.path == "/metrics":
+        return await call_next(request)
+    start = time.perf_counter()
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        return response
+    except Exception:
+        status_code = 500
+        raise
+    finally:
+        elapsed = time.perf_counter() - start
+        path = request.url.path
+        method = request.method
+        REQUEST_COUNT.labels(method=method, path=path, status=status_code).inc()
+        REQUEST_LATENCY.labels(method=method, path=path, status=status_code).observe(elapsed)
+
+
+@app.get("/metrics")
+def metrics():
+    """Prometheus metrics endpoint."""
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.exception_handler(Exception)
@@ -216,8 +263,9 @@ async def pipeline_from_prompt(
     svg_path = job_dir / f"{name}.svg"
     stl_path = job_dir / f"{name}.stl"
 
+    OPENAI_INFLIGHT.inc()
     try:
-        generate_outline_png(prompt, str(png_path))
+        await anyio.to_thread.run_sync(generate_outline_png, prompt, str(png_path))
     except OpenAIError as e:
         status = getattr(e, "status_code", 500) or 500
         detail = _openai_detail(e)
@@ -228,6 +276,8 @@ async def pipeline_from_prompt(
             detail,
         )
         raise HTTPException(status_code=status, detail=detail)
+    finally:
+        OPENAI_INFLIGHT.dec()
 
     traced = trace_png_to_polygon(
         str(png_path),
@@ -278,8 +328,9 @@ async def outline_from_prompt(
     png_path = job_dir / f"{name}.png"
     svg_path = job_dir / f"{name}.svg"
 
+    OPENAI_INFLIGHT.inc()
     try:
-        generate_outline_png(prompt, str(png_path))
+        await anyio.to_thread.run_sync(generate_outline_png, prompt, str(png_path))
     except OpenAIError as e:
         status = getattr(e, "status_code", 500) or 500
         detail = _openai_detail(e)
@@ -290,6 +341,8 @@ async def outline_from_prompt(
             detail,
         )
         raise HTTPException(status_code=status, detail=detail)
+    finally:
+        OPENAI_INFLIGHT.dec()
 
     traced = trace_png_to_polygon(
         str(png_path),
