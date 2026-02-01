@@ -37,7 +37,7 @@ MIT License © seaburr
 
 1. Create or download a **simple black shape on white background** PNG outline.
 2. Upload it in the UI.
-3. Adjust sliders (wall, flange size, height).
+3. Adjust sliders (wall, flange size, height, smoothing).
 4. Download STL.
 
 No OpenAI calls.

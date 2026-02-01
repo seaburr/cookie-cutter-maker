@@ -25,6 +25,7 @@ def main():
     p.add_argument("--min-component-area-mm2", type=float, default=25.0, help="Discard tiny disconnected islands below this area")
     p.add_argument("--threshold", type=int, default=200)
     p.add_argument("--simplify", type=float, default=0.002)
+    p.add_argument("--smooth-radius", type=float, default=1.0, help="Gaussian blur radius (pixels) before tracing")
 
     args = p.parse_args()
     os.makedirs(args.outdir, exist_ok=True)
@@ -38,7 +39,13 @@ def main():
         generate_outline_png(args.prompt, png_path)
 
     svg_path = os.path.join(args.outdir, f"{args.name}.svg")
-    traced = trace_png_to_polygon(png_path, svg_path, threshold=args.threshold, simplify_epsilon=args.simplify)
+    traced = trace_png_to_polygon(
+        png_path,
+        svg_path,
+        threshold=args.threshold,
+        simplify_epsilon=args.simplify,
+        smooth_radius=args.smooth_radius,
+    )
 
     stl_path = os.path.join(args.outdir, f"{args.name}.stl")
     polygon_to_cookie_cutter_stl(

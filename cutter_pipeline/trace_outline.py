@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 from shapely.geometry import LineString, Polygon
 from skimage import measure
 
@@ -25,8 +25,11 @@ def trace_png_to_polygon(
     svg_out_path: str,
     threshold: int = 200,
     simplify_epsilon: float = 0.002,
+    smooth_radius: float = 0.0,
 ) -> TraceResult:
     img = Image.open(png_path).convert("L")
+    if smooth_radius > 0:
+        img = img.filter(ImageFilter.GaussianBlur(radius=smooth_radius))
     arr = np.array(img)
     binary = (arr < threshold).astype(float)
 

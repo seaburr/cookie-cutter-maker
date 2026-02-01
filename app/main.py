@@ -81,6 +81,7 @@ async def trace_from_png(
     name: str = Form("outline"),
     threshold: int = Form(200),
     simplify: float = Form(0.002),
+    smooth_radius: float = Form(1.0),
 ):
     if not file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
         raise HTTPException(status_code=400, detail="Upload a PNG/JPG outline image")
@@ -90,7 +91,13 @@ async def trace_from_png(
     svg_path = job_dir / f"{name}.svg"
 
     png_path.write_bytes(await file.read())
-    traced = trace_png_to_polygon(str(png_path), str(svg_path), threshold=threshold, simplify_epsilon=simplify)
+    traced = trace_png_to_polygon(
+        str(png_path),
+        str(svg_path),
+        threshold=threshold,
+        simplify_epsilon=simplify,
+        smooth_radius=smooth_radius,
+    )
     _save_polygon(job_dir, traced.polygon)
 
     return {
@@ -114,6 +121,7 @@ async def pipeline_from_png(
     min_component_area_mm2: float = Form(25.0),
     threshold: int = Form(200),
     simplify: float = Form(0.002),
+    smooth_radius: float = Form(1.0),
 ):
     if not file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
         raise HTTPException(status_code=400, detail="Upload a PNG/JPG outline image")
@@ -124,7 +132,13 @@ async def pipeline_from_png(
     stl_path = job_dir / f"{name}.stl"
 
     png_path.write_bytes(await file.read())
-    traced = trace_png_to_polygon(str(png_path), str(svg_path), threshold=threshold, simplify_epsilon=simplify)
+    traced = trace_png_to_polygon(
+        str(png_path),
+        str(svg_path),
+        threshold=threshold,
+        simplify_epsilon=simplify,
+        smooth_radius=smooth_radius,
+    )
     _save_polygon(job_dir, traced.polygon)
 
     polygon_to_cookie_cutter_stl(
@@ -164,6 +178,7 @@ async def pipeline_from_prompt(
     tip_smooth_mm: float = Form(0.6),
     keep_holes: bool = Form(False),
     min_component_area_mm2: float = Form(25.0),
+    smooth_radius: float = Form(1.0),
 ):
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
@@ -177,7 +192,11 @@ async def pipeline_from_prompt(
     stl_path = job_dir / f"{name}.stl"
 
     generate_outline_png(prompt, str(png_path))
-    traced = trace_png_to_polygon(str(png_path), str(svg_path))
+    traced = trace_png_to_polygon(
+        str(png_path),
+        str(svg_path),
+        smooth_radius=smooth_radius,
+    )
     # Save prompt for reference
     (job_dir / "prompt.txt").write_text(prompt, encoding="utf-8")
     _save_polygon(job_dir, traced.polygon)
@@ -210,6 +229,7 @@ async def pipeline_from_prompt(
 async def outline_from_prompt(
     prompt: str = Form(...),
     name: str = Form("cookie_cutter"),
+    smooth_radius: float = Form(1.0),
 ):
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
@@ -222,7 +242,11 @@ async def outline_from_prompt(
     svg_path = job_dir / f"{name}.svg"
 
     generate_outline_png(prompt, str(png_path))
-    traced = trace_png_to_polygon(str(png_path), str(svg_path))
+    traced = trace_png_to_polygon(
+        str(png_path),
+        str(svg_path),
+        smooth_radius=smooth_radius,
+    )
     (job_dir / "prompt.txt").write_text(prompt, encoding="utf-8")
     _save_polygon(job_dir, traced.polygon)
 
@@ -238,6 +262,7 @@ async def trace_from_job(
     name: str = Form("cookie_cutter"),
     threshold: int = Form(200),
     simplify: float = Form(0.002),
+    smooth_radius: float = Form(1.0),
 ):
     job_dir = OUTPUT_DIR / job_id
     if not job_dir.exists():
@@ -246,7 +271,13 @@ async def trace_from_job(
     png_path = _find_png(job_dir, name)
     svg_path = job_dir / f"{Path(png_path).stem}.svg"
 
-    traced = trace_png_to_polygon(str(png_path), str(svg_path), threshold=threshold, simplify_epsilon=simplify)
+    traced = trace_png_to_polygon(
+        str(png_path),
+        str(svg_path),
+        threshold=threshold,
+        simplify_epsilon=simplify,
+        smooth_radius=smooth_radius,
+    )
     _save_polygon(job_dir, traced.polygon)
 
     return {

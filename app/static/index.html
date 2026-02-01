@@ -8,12 +8,12 @@
     body, button, input, textarea, select { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
     body {
       margin: 0;
-      background: radial-gradient(circle at 15% 15%, #111926 0%, #0b0f14 32%, #0a0d13 100%);
+      background: radial-gradient(circle at 15% 15%, #070b12 0%, #05070d 32%, #04060a 100%);
       color: #e6edf3;
     }
     header { padding: 24px 28px; border-bottom: 1px solid #1f2a37; display:flex; align-items:center; justify-content:space-between;}
     main { display:flex; flex-direction:column; gap: 28px; padding: 16px; max-width: 1280px; margin: 0 auto; }
-    .card { background: linear-gradient(145deg, #0f1824, #0c121a); border: 1px solid #1f2a37; border-radius: 16px; padding: 18px; box-shadow: 0 16px 40px rgba(0,0,0,0.35); }
+    .card { background: linear-gradient(145deg, #101a2b, #0c121a); border: 1px solid #22344b; border-radius: 16px; padding: 18px; box-shadow: 0 18px 46px rgba(0,0,0,0.42); }
     h2 { margin: 0 0 12px 0; font-size: 18px; font-weight:800; letter-spacing: 0.2px; }
     label { display:block; font-size: 12px; color:#9fb0c2; margin-top: 12px; margin-bottom:6px; letter-spacing: 0.1px; }
     input[type="text"], textarea { width:100%; background:#0b0f14; border:1px solid #243244; color:#e6edf3; border-radius:12px; padding:12px; }
@@ -23,6 +23,8 @@
     input[type="file"]::file-selector-button:hover { background:#1f6feb; }
     .row { display:flex; gap:10px; }
     .row > div { flex:1; }
+    .row.stack { flex-direction: column; }
+    .row.stack > div { flex: none; }
     input[type="range"] { width:100%; }
     .tip { position:relative; display:inline-flex; align-items:center; justify-content:center; margin-left:6px; width:16px; height:16px; border:1px solid #2b3b4f; border-radius:50%; font-size:11px; line-height:14px; color:#9fb0c2; cursor:help; }
     .tip:hover { color:#e6edf3; border-color:#3b4f66; background:#162235; }
@@ -114,7 +116,7 @@
 
       <div id="panePng">
         <label>Outline image (black on white)</label>
-        <input id="file" type="file" accept=".png,.jpg,.jpeg" />
+        <input id="file" class="short-input" type="file" accept=".png,.jpg,.jpeg" />
       </div>
 
       <div id="panePrompt" style="display:none;">
@@ -151,7 +153,7 @@
   <div class="card step-grid">
     <div>
       <h2>Step 2: Trace tuning (SVG)</h2>
-      <div class="row">
+      <div class="row stack">
         <div>
           <label>Threshold: <span id="thrVal">200</span> <span class="tip" data-tip="Black/white cutoff for tracing; lower = more pixels counted as ink.">?</span></label>
           <input id="thr" type="range" min="50" max="250" value="200" step="1"/>
@@ -159,6 +161,10 @@
         <div>
           <label>Simplify: <span id="simpVal">0.002</span> <span class="tip" data-tip="Douglas-Peucker tolerance; higher = fewer nodes and smoother outline.">?</span></label>
           <input id="simp" type="range" min="0.0005" max="0.01" value="0.002" step="0.0005"/>
+        </div>
+        <div>
+          <label>Smooth radius (px): <span id="smoothVal">1.0</span> <span class="tip" data-tip="Light Gaussian blur to knock out speckle noise before tracing.">?</span></label>
+          <input id="smooth" type="range" min="0" max="4.0" value="1.0" step="0.1"/>
         </div>
       </div>
       <button id="btnTrace" class="secondary" type="button">Trace</button>
@@ -377,12 +383,13 @@
   bindRange('wall','wallVal', v => Number(v).toFixed(1));
   bindRange('height','heightVal');
   bindRange('flangeH','flangeHVal', v => Number(v).toFixed(3));
-    bindRange('flangeOut','flangeOutVal');
-    bindRange('thr','thrVal');
-    bindRange('simp','simpVal', v => Number(v).toFixed(4));
-    bindRange('cleanup','cleanupVal', v => Number(v).toFixed(1));
-    bindRange('tipSmooth','tipSmoothVal', v => Number(v).toFixed(2));
-    bindRange('area','areaVal');
+  bindRange('flangeOut','flangeOutVal');
+  bindRange('thr','thrVal');
+  bindRange('simp','simpVal', v => Number(v).toFixed(4));
+  bindRange('smooth','smoothVal', v => Number(v).toFixed(1));
+  bindRange('cleanup','cleanupVal', v => Number(v).toFixed(1));
+  bindRange('tipSmooth','tipSmoothVal', v => Number(v).toFixed(2));
+  bindRange('area','areaVal');
 
   // Tabs
   const tabPng = $('tabPng');
@@ -486,6 +493,7 @@
         fd.append('name', $('name').value || 'cookie_cutter');
         fd.append('threshold', $('thr').value);
         fd.append('simplify', $('simp').value);
+        fd.append('smooth_radius', $('smooth').value);
         const data = await postForm('/trace/from-png', fd);
         setStatus('Outline loaded from PNG.');
         setLinks(data);
@@ -521,6 +529,7 @@
       fd.append('name', $('name').value || 'cookie_cutter');
       fd.append('threshold', $('thr').value);
       fd.append('simplify', $('simp').value);
+      fd.append('smooth_radius', $('smooth').value);
       const data = await postForm('/trace/from-job', fd);
       setStatus('Trace updated.');
       setLinks(data);
