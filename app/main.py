@@ -1,9 +1,11 @@
 import os
 import uuid
 import json
+import logging
+from typing import Any
 from pathlib import Path
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -12,6 +14,7 @@ from cutter_pipeline.stl_cutter import polygon_to_cookie_cutter_stl
 from shapely.geometry import shape, mapping
 import trimesh
 import zipfile
+from openai import OpenAIError
 
 # Optional: prompt->png requires OPENAI_API_KEY
 try:
@@ -27,6 +30,14 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+@app.exception_handler(Exception)
+async def _unhandled_error_handler(request: Request, exc: Exception):
+    """Return the real error message to the client while logging the stack."""
+    logging.exception("Unhandled error during %s %s", request.method, request.url, exc_info=exc)
+    detail = str(exc).strip() or exc.__class__.__name__
+    return JSONResponse(status_code=500, content={"detail": detail})
 
 @app.get("/", response_class=HTMLResponse)
 def index():
@@ -74,6 +85,20 @@ def _find_png(job_dir: Path, name: str) -> Path:
     if matches:
         return matches[0]
     raise HTTPException(status_code=404, detail="PNG not found for this job. Upload or generate first.")
+
+
+def _openai_detail(exc: OpenAIError) -> str:
+    """Prefer the nested OpenAI error message if available."""
+    # Newer openai client exposes .body with {'error': {'message': ...}}
+    body: Any = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        msg = body.get("error", {}).get("message") or body.get("message")
+        if msg:
+            return str(msg)
+    msg = getattr(exc, "message", None)
+    if msg:
+        return str(msg)
+    return str(exc).strip() or exc.__class__.__name__
 
 @app.post("/trace/from-png")
 async def trace_from_png(
@@ -191,7 +216,19 @@ async def pipeline_from_prompt(
     svg_path = job_dir / f"{name}.svg"
     stl_path = job_dir / f"{name}.stl"
 
-    generate_outline_png(prompt, str(png_path))
+    try:
+        generate_outline_png(prompt, str(png_path))
+    except OpenAIError as e:
+        status = getattr(e, "status_code", 500) or 500
+        detail = _openai_detail(e)
+        logging.warning(
+            "OpenAI image generation failed (status=%s, prompt=%s): %s",
+            status,
+            prompt.strip()[:200],
+            detail,
+        )
+        raise HTTPException(status_code=status, detail=detail)
+
     traced = trace_png_to_polygon(
         str(png_path),
         str(svg_path),
@@ -241,7 +278,19 @@ async def outline_from_prompt(
     png_path = job_dir / f"{name}.png"
     svg_path = job_dir / f"{name}.svg"
 
-    generate_outline_png(prompt, str(png_path))
+    try:
+        generate_outline_png(prompt, str(png_path))
+    except OpenAIError as e:
+        status = getattr(e, "status_code", 500) or 500
+        detail = _openai_detail(e)
+        logging.warning(
+            "OpenAI outline failed (status=%s, prompt=%s): %s",
+            status,
+            prompt.strip()[:200],
+            detail,
+        )
+        raise HTTPException(status_code=status, detail=detail)
+
     traced = trace_png_to_polygon(
         str(png_path),
         str(svg_path),
