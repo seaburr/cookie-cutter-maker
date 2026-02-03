@@ -118,15 +118,15 @@ def polygon_to_cookie_cutter_stl(
     out_path: str,
     target_width_mm: float = 95.0,
     wall_mm: float = 1.0,
-    total_h_mm: float = 28.0,
+    total_h_mm: float = 25.0,
     flange_h_mm: float = 7.226,
-    flange_out_mm: float = 6.0,
+    flange_out_mm: float = 5.0,
     samples: int = 520,
     cleanup_mm: float = 0.5,
     drop_holes: bool = True,
     min_component_area_mm2: float = 25.0,
     tip_smooth_mm: float = 0.6,
-    bevel_h_mm: float = 5.0,
+    bevel_h_mm: float = 3.0,
     bevel_out_mm: float = 0.6,
 ) -> str:
     # Normalise orientation so exterior is CCW (helps keep triangle winding consistent)
