@@ -218,6 +218,9 @@
         </div>
       </div>
 
+      <label>Bevel height (mm): <span id="bevelHVal">5</span> <span class="tip" data-tip="Height of the outer-edge bevel at the top of the wall. 0 = no bevel.">?</span></label>
+      <input id="bevelH" type="range" min="0" max="8" value="5" step="0.1"/>
+
       <label>Flange outward (mm): <span id="flangeOutVal">6</span> <span class="tip" data-tip="How far the grip flange sticks out horizontally.">?</span></label>
       <input id="flangeOut" type="range" min="0" max="12" value="6" step="0.5"/>
 
@@ -388,6 +391,7 @@
   bindRange('wall','wallVal', v => Number(v).toFixed(1));
   bindRange('height','heightVal');
   bindRange('flangeH','flangeHVal', v => Number(v).toFixed(3));
+  bindRange('bevelH','bevelHVal', v => Number(v).toFixed(1));
   bindRange('flangeOut','flangeOutVal');
   bindRange('thr','thrVal');
   bindRange('simp','simpVal', v => Number(v).toFixed(4));
@@ -483,6 +487,7 @@
     fd.append('total_h_mm', $('height').value);
     fd.append('flange_h_mm', $('flangeH').value);
     fd.append('flange_out_mm', $('flangeOut').value);
+    fd.append('bevel_h_mm', $('bevelH').value);
     fd.append('cleanup_mm', $('cleanup').value);
     fd.append('tip_smooth_mm', $('tipSmooth').value);
     fd.append('keep_holes', $('keepHoles').checked);
