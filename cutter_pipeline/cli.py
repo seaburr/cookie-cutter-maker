@@ -20,7 +20,6 @@ def main():
     p.add_argument("--total-h-mm", type=float, default=25.0)
     p.add_argument("--flange-h-mm", type=float, default=7.226)
     p.add_argument("--flange-out-mm", type=float, default=5.0)
-    p.add_argument("--bevel-h-mm", type=float, default=3.0, help="Height of outer-edge bevel (0 disables)")
     p.add_argument("--cleanup-mm", type=float, default=0.5, help="Remove features smaller than this (0 disables)")
     p.add_argument("--keep-holes", action="store_true", help="Keep interior holes instead of filling them")
     p.add_argument("--min-component-area-mm2", type=float, default=25.0, help="Discard tiny disconnected islands below this area")
@@ -57,7 +56,6 @@ def main():
         total_h_mm=args.total_h_mm,
         flange_h_mm=args.flange_h_mm,
         flange_out_mm=args.flange_out_mm,
-        bevel_h_mm=args.bevel_h_mm,
         cleanup_mm=args.cleanup_mm,
         drop_holes=not args.keep_holes,
         min_component_area_mm2=args.min_component_area_mm2,

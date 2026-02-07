@@ -209,17 +209,14 @@
 
       <div class="row">
         <div>
-          <label>Total height (mm): <span id="heightVal">25</span> <span class="tip" data-tip="Overall wall height of the cutter.">?</span></label>
-          <input id="height" type="range" min="16" max="40" value="25" step="1"/>
-        </div>
-        <div>
-          <label>Flange height (mm): <span id="flangeHVal">7.226</span> <span class="tip" data-tip="How tall the grip flange is above the cutting edge.">?</span></label>
-          <input id="flangeH" type="range" min="3" max="14" value="7.226" step="0.1"/>
-        </div>
-      </div>
-
-      <label>Bevel height (mm): <span id="bevelHVal">3.0</span> <span class="tip" data-tip="Height of the outer-edge bevel at the top of the wall. 0 = no bevel.">?</span></label>
-      <input id="bevelH" type="range" min="0" max="5" value="3" step="0.5"/>
+      <label>Total height (mm): <span id="heightVal">25</span> <span class="tip" data-tip="Overall wall height of the cutter.">?</span></label>
+      <input id="height" type="range" min="16" max="40" value="25" step="1"/>
+    </div>
+    <div>
+      <label>Flange height (mm): <span id="flangeHVal">7.226</span> <span class="tip" data-tip="How tall the grip flange is above the cutting edge.">?</span></label>
+      <input id="flangeH" type="range" min="3" max="14" value="7.226" step="0.1"/>
+    </div>
+  </div>
 
       <label>Flange outward (mm): <span id="flangeOutVal">5</span> <span class="tip" data-tip="How far the grip flange sticks out horizontally.">?</span></label>
       <input id="flangeOut" type="range" min="0" max="12" value="5" step="0.5"/>
@@ -391,7 +388,6 @@
   bindRange('wall','wallVal', v => Number(v).toFixed(1));
   bindRange('height','heightVal');
   bindRange('flangeH','flangeHVal', v => Number(v).toFixed(3));
-  bindRange('bevelH','bevelHVal', v => Number(v).toFixed(1));
   bindRange('flangeOut','flangeOutVal');
   bindRange('thr','thrVal');
   bindRange('simp','simpVal', v => Number(v).toFixed(4));
@@ -487,7 +483,6 @@
     fd.append('total_h_mm', $('height').value);
     fd.append('flange_h_mm', $('flangeH').value);
     fd.append('flange_out_mm', $('flangeOut').value);
-    fd.append('bevel_h_mm', $('bevelH').value);
     fd.append('cleanup_mm', $('cleanup').value);
     fd.append('tip_smooth_mm', $('tipSmooth').value);
     fd.append('keep_holes', $('keepHoles').checked);
