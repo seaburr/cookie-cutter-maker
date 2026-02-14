@@ -16,7 +16,7 @@ def main():
     p.add_argument("--name", default="cookie_cutter")
 
     p.add_argument("--width-mm", type=float, default=95.0)
-    p.add_argument("--wall-mm", type=float, default=1.0)
+    p.add_argument("--wall-mm", type=float, default=1.0, help="Base cutter wall thickness (minimum enforced: 0.45mm)")
     p.add_argument("--total-h-mm", type=float, default=25.0)
     p.add_argument("--flange-h-mm", type=float, default=7.226)
     p.add_argument("--flange-out-mm", type=float, default=5.0)
@@ -25,7 +25,7 @@ def main():
         "--bevel-top-wall-mm",
         type=float,
         default=0.5,
-        help="Target wall thickness at the top of the taper",
+        help="Target wall thickness at the top of the taper (minimum enforced: 0.45mm)",
     )
     p.add_argument("--cleanup-mm", type=float, default=0.5, help="Remove features smaller than this (0 disables)")
     p.add_argument("--keep-holes", action="store_true", help="Keep interior holes instead of filling them")

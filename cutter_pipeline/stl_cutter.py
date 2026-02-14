@@ -6,12 +6,21 @@ import trimesh
 from shapely.geometry import LineString, Polygon
 from shapely.geometry.polygon import orient
 
+MIN_BEVEL_TOP_WALL_MM = 0.45
+
 
 def _sample_ring(coords, n: int):
     if coords[0] != coords[-1]:
         coords = list(coords) + [coords[0]]
     line = LineString(coords)
     return [line.interpolate(line.length * (i / n)).coords[0] for i in range(n)]
+
+
+def _align_ring_phase(reference: np.ndarray, ring: np.ndarray) -> np.ndarray:
+    # Keep vertex indexing consistent between neighboring rings to avoid twisted strips.
+    distances = np.linalg.norm(ring - reference[0], axis=1)
+    shift = int(np.argmin(distances))
+    return np.roll(ring, -shift, axis=0)
 
 
 def polygon_to_cookie_cutter_stl(
@@ -39,6 +48,7 @@ def polygon_to_cookie_cutter_stl(
     w = maxx - minx
     if w <= 0:
         raise ValueError("Invalid polygon bounds")
+    wall_mm = max(wall_mm, MIN_BEVEL_TOP_WALL_MM)
     scale = target_width_mm / w
 
     scaled = Polygon([(x * scale, y * scale) for x, y in poly.exterior.coords]).buffer(0)
@@ -73,7 +83,8 @@ def polygon_to_cookie_cutter_stl(
     outer_flange = scaled.buffer(flange_out_mm, join_style=1, cap_style=2).buffer(0)
 
     bevel_h_mm = max(0.0, min(bevel_h_mm, total_h_mm))
-    target_top_wall = max(0.1, min(bevel_top_wall_mm, wall_mm))
+    # Keep cutter tips from becoming unprintably thin/brittle.
+    target_top_wall = min(max(bevel_top_wall_mm, MIN_BEVEL_TOP_WALL_MM), wall_mm)
     bevel_start_z = total_h_mm - bevel_h_mm
 
     def _sample(coords):
@@ -105,23 +116,12 @@ def polygon_to_cookie_cutter_stl(
 
         outer_ring = _sample(list(outer.exterior.coords))
         inner_ring = _sample(list(inner_oriented.exterior.coords))[::-1]
-        top_outer_ring = _sample(list(top_outer.exterior.coords))
 
         rings: list[tuple[np.ndarray, float]] = []
 
         def add_ring(ring: np.ndarray, z: float) -> int:
             rings.append((ring, z))
             return (len(rings) - 1) * samples
-
-        outer0 = add_ring(outer_ring, 0.0)
-        inner0 = add_ring(inner_ring, 0.0)
-        outer1 = outer0
-        inner1 = inner0
-        if bevel_start_z > 0:
-            outer1 = add_ring(outer_ring, bevel_start_z)
-            inner1 = add_ring(inner_ring, bevel_start_z)
-        outer2 = add_ring(top_outer_ring, total_h_mm)
-        inner2 = add_ring(inner_ring, total_h_mm)
 
         def strip(a_off: int, b_off: int, flip: bool = False):
             faces = []
@@ -138,12 +138,37 @@ def polygon_to_cookie_cutter_stl(
                     faces.append([a0, b0, b1])
             return faces
 
-        faces = []
+        taper_depth_mm = wall_mm - target_top_wall
+        taper_steps = max(2, int(np.ceil(bevel_h_mm / 0.25)))
+        outer_sections: list[tuple[np.ndarray, float]] = [(outer_ring, 0.0)]
         if bevel_start_z > 0:
-            faces += strip(outer0, outer1, flip=False)
-            faces += strip(inner1, inner0, flip=True)
-        faces += strip(outer1, outer2, flip=False)
-        faces += strip(inner2, inner1, flip=True)
+            outer_sections.append((outer_ring, bevel_start_z))
+
+        prev_ring = outer_ring
+        for step in range(1, taper_steps + 1):
+            t = step / taper_steps
+            z = bevel_start_z + (bevel_h_mm * t)
+            delta = taper_depth_mm * t
+            section_poly = _offset_outer(outer, delta)
+            if section_poly is None or section_poly.area <= inner.area:
+                section_poly = top_outer
+            section_poly = orient(section_poly, sign=1.0)
+            section_ring = _sample(list(section_poly.exterior.coords))
+            section_ring = _align_ring_phase(prev_ring, section_ring)
+            outer_sections.append((section_ring, z))
+            prev_ring = section_ring
+
+        outer_ids = [add_ring(ring, z) for ring, z in outer_sections]
+        inner_ids = [add_ring(inner_ring, 0.0)]
+        if bevel_start_z > 0:
+            inner_ids.append(add_ring(inner_ring, bevel_start_z))
+        inner_ids.append(add_ring(inner_ring, total_h_mm))
+
+        faces = []
+        for a, b in zip(outer_ids, outer_ids[1:]):
+            faces += strip(a, b, flip=False)
+        for a, b in zip(inner_ids, inner_ids[1:]):
+            faces += strip(b, a, flip=True)
 
         verts = np.vstack([np.column_stack([r, np.full((samples, 1), z)]) for r, z in rings])
         body = trimesh.Trimesh(vertices=verts, faces=faces, process=False)
