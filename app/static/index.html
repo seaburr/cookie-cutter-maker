@@ -119,7 +119,7 @@
       </div>
 
       <div id="panePng">
-        <label>Outline image (black on white)</label>
+        <label>Image — outline, illustration, or photo</label>
         <input id="file" class="short-input" type="file" accept=".png,.jpg,.jpeg" />
       </div>
 
@@ -147,8 +147,9 @@
       <header>Tips</header>
       <div class="content small">
         <ul>
-          <li>Use a single closed silhouette outline (no interior lines).</li>
-          <li>High-contrast black on white PNGs trace best.</li>
+          <li><b>Outline/clip-art:</b> black on white traces best.</li>
+          <li><b>Photo or illustration:</b> any image with a clear subject works — the pipeline detects the type automatically.</li>
+          <li>For complex backgrounds, install <code>rembg</code> (local, no API key) for the best quality.</li>
           <li>Keep shapes simple; avoid thin lines.</li>
         </ul>
       </div>
@@ -185,7 +186,7 @@
       <div class="content small">
         <ul>
           <li>If tracing is jagged, increase <b>Simplify</b>.</li>
-          <li>If outline disappears, adjust <b>Threshold</b>.</li>
+          <li><b>Threshold</b> applies only to outline/binary images. For photos it is ignored.</li>
           <li>Re-run this step as much as you need; no new prompt tokens.</li>
         </ul>
       </div>
@@ -417,10 +418,24 @@
   };
 
   function setStatus(msg) { $('status').textContent = msg; }
-  function setStepStatus(msg, type='info') {
+  const MODE_LABELS = {
+    binary:    { label: 'outline',    title: 'Pre-drawn outline — classic threshold path' },
+    simple_bg: { label: 'photo · bg', title: 'Uniform background detected — colour-distance extraction' },
+    complex:   { label: 'photo · ai', title: 'Complex background — rembg (local) or graph-cut fallback' },
+  };
+
+  function setStepStatus(msg, type='info', extractionMode='', warning='') {
     const el = $('step1Status');
     if (!el) return;
-    el.textContent = msg || '';
+    let html = msg ? `<span>${msg}</span>` : '';
+    if (extractionMode && MODE_LABELS[extractionMode]) {
+      const m = MODE_LABELS[extractionMode];
+      html += ` <span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:#162235;border:1px solid #2b3b4f;color:#93c5fd;" title="${m.title}">${m.label}</span>`;
+    }
+    if (warning) {
+      html += `<div style="margin-top:6px;color:#fcd34d;font-size:11px;">⚠ ${warning}</div>`;
+    }
+    el.innerHTML = html || '';
     el.className = 'status ' + (msg ? type : '');
   }
   function updatePreviews(obj) {
@@ -499,7 +514,7 @@
 
       if (mode === 'png') {
         const f = $('file').files[0];
-        if (!f) throw new Error('Choose an outline image first.');
+        if (!f) throw new Error('Choose an image first.');
         const fd = new FormData();
         fd.append('file', f);
         fd.append('name', $('name').value || 'cookie_cutter');
@@ -507,8 +522,8 @@
         fd.append('simplify', $('simp').value);
         fd.append('smooth_radius', $('smooth').value);
         const data = await postForm('/trace/from-png', fd);
-        setStatus('Outline loaded from PNG.');
-        setStepStatus('Outline loaded from PNG.', 'success');
+        setStatus('Outline loaded.');
+        setStepStatus('Outline loaded.', 'success', data.extraction_mode, data.warning || '');
         setLinks(data);
         if (data.svg) {
           $('svgPreview').innerHTML = `<iframe src="${data.svg}" aria-label="SVG preview"></iframe>`;
@@ -521,7 +536,7 @@
         fd.append('name', $('name').value || 'cookie_cutter');
         const data = await postForm('/outline/from-prompt', fd);
         setStatus('Outline generated from prompt.');
-        setStepStatus('Outline generated from prompt.', 'success');
+        setStepStatus('Outline generated from prompt.', 'success', data.extraction_mode || '', data.warning || '');
         setLinks(data);
         updatePreviews(data);
       }
@@ -547,6 +562,7 @@
       fd.append('smooth_radius', $('smooth').value);
       const data = await postForm('/trace/from-job', fd);
       setStatus('Trace updated.');
+      setStepStatus('Trace updated.', 'success', data.extraction_mode, data.warning || '');
       setLinks(data);
       updatePreviews(data);
     } catch (e) {

@@ -154,6 +154,8 @@ async def trace_from_png(
     threshold: int = Form(200),
     simplify: float = Form(0.002),
     smooth_radius: float = Form(1.0),
+    extraction_mode: str = Form("auto"),
+    delta_e_threshold: float = Form(28.0),
 ):
     if not file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
         raise HTTPException(status_code=400, detail="Upload a PNG/JPG outline image")
@@ -169,14 +171,20 @@ async def trace_from_png(
         threshold=threshold,
         simplify_epsilon=simplify,
         smooth_radius=smooth_radius,
+        extraction_mode=extraction_mode,
+        delta_e_threshold=delta_e_threshold,
     )
     _save_polygon(job_dir, traced.polygon)
 
-    return {
+    result = {
         "job_id": job_dir.name,
         "svg": f"/files/{job_dir.name}/{name}.svg",
         "png": f"/files/{job_dir.name}/{name}.png",
+        "extraction_mode": traced.extraction_mode,
     }
+    if traced.extraction_warning:
+        result["warning"] = traced.extraction_warning
+    return result
 
 @app.post("/pipeline/from-png")
 async def pipeline_from_png(
@@ -194,6 +202,8 @@ async def pipeline_from_png(
     threshold: int = Form(200),
     simplify: float = Form(0.002),
     smooth_radius: float = Form(1.0),
+    extraction_mode: str = Form("auto"),
+    delta_e_threshold: float = Form(28.0),
 ):
     if not file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
         raise HTTPException(status_code=400, detail="Upload a PNG/JPG outline image")
@@ -210,6 +220,8 @@ async def pipeline_from_png(
         threshold=threshold,
         simplify_epsilon=simplify,
         smooth_radius=smooth_radius,
+        extraction_mode=extraction_mode,
+        delta_e_threshold=delta_e_threshold,
     )
     _save_polygon(job_dir, traced.polygon)
 
@@ -229,13 +241,17 @@ async def pipeline_from_png(
 
     zip_path = _write_zip(job_dir, [png_path, svg_path, stl_path], base_name=name)
 
-    return {
+    result = {
         "job_id": job_dir.name,
         "png": f"/files/{job_dir.name}/{name}.png",
         "svg": f"/files/{job_dir.name}/{name}.svg",
         "stl": f"/files/{job_dir.name}/{name}.stl",
         "zip": f"/files/{job_dir.name}/{zip_path.name}",
+        "extraction_mode": traced.extraction_mode,
     }
+    if traced.extraction_warning:
+        result["warning"] = traced.extraction_warning
+    return result
 
 @app.post("/pipeline/from-prompt")
 async def pipeline_from_prompt(
@@ -365,6 +381,8 @@ async def trace_from_job(
     threshold: int = Form(200),
     simplify: float = Form(0.002),
     smooth_radius: float = Form(1.0),
+    extraction_mode: str = Form("auto"),
+    delta_e_threshold: float = Form(28.0),
 ):
     job_dir = OUTPUT_DIR / job_id
     if not job_dir.exists():
@@ -379,14 +397,20 @@ async def trace_from_job(
         threshold=threshold,
         simplify_epsilon=simplify,
         smooth_radius=smooth_radius,
+        extraction_mode=extraction_mode,
+        delta_e_threshold=delta_e_threshold,
     )
     _save_polygon(job_dir, traced.polygon)
 
-    return {
+    result = {
         "job_id": job_dir.name,
         "png": f"/files/{job_dir.name}/{png_path.name}",
         "svg": f"/files/{job_dir.name}/{svg_path.name}",
+        "extraction_mode": traced.extraction_mode,
     }
+    if traced.extraction_warning:
+        result["warning"] = traced.extraction_warning
+    return result
 
 @app.post("/stl/from-job")
 async def stl_from_job(
