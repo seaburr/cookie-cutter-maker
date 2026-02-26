@@ -53,7 +53,11 @@ def classify_image(img: Image.Image) -> ImageMode:
     mid_pct  = 1.0 - low_pct - high_pct   # mid-tones
 
     if mid_pct < 0.12:
-        logger.debug("classify_image → binary  (mid_pct=%.3f)", mid_pct)
+        logger.info(
+            "Image classified as BINARY OUTLINE — %.1f%% mid-tone pixels "
+            "(threshold: <12%%). Using luminance threshold extraction.",
+            mid_pct * 100,
+        )
         return "binary"
 
     # 2. Uniform-background check
@@ -71,10 +75,19 @@ def classify_image(img: Image.Image) -> ImageMode:
     corner_std = float(np.std(corners))
 
     if corner_std < 28:
-        logger.debug("classify_image → simple_bg  (corner_std=%.1f)", corner_std)
+        logger.info(
+            "Image classified as UNIFORM BACKGROUND — corner pixel std=%.1f "
+            "(threshold: <28). Using LAB colour-distance extraction.",
+            corner_std,
+        )
         return "simple_bg"
 
-    logger.debug("classify_image → complex  (mid_pct=%.3f, corner_std=%.1f)", mid_pct, corner_std)
+    logger.info(
+        "Image classified as COMPLEX / PHOTOGRAPHIC — corner pixel std=%.1f, "
+        "%.1f%% mid-tone pixels. Using rembg (U2Net) or graph-cut fallback.",
+        corner_std,
+        mid_pct * 100,
+    )
     return "complex"
 
 
@@ -123,11 +136,11 @@ def extract_mask_simple_bg(
 
     # Morphological cleanup
     if close_radius > 0:
-        mask = morphology.binary_closing(mask, morphology.disk(close_radius))
+        mask = morphology.closing(mask, morphology.disk(close_radius))
     if open_radius > 0:
-        mask = morphology.binary_opening(mask, morphology.disk(open_radius))
-    mask = morphology.remove_small_objects(mask, min_size=min_object_px)
-    mask = morphology.remove_small_holes(mask, area_threshold=fill_hole_px)
+        mask = morphology.opening(mask, morphology.disk(open_radius))
+    mask = morphology.remove_small_objects(mask, max_size=min_object_px)
+    mask = morphology.remove_small_holes(mask, max_size=fill_hole_px)
 
     return mask
 
@@ -158,15 +171,19 @@ def extract_mask_complex(
         pil_out = _rembg_remove(pil_in)             # returns RGBA
         alpha   = np.array(pil_out.split()[-1])     # A channel
         mask    = alpha > 10                         # near-transparent = background
-        mask    = morphology.remove_small_objects(mask, min_size=300)
-        mask    = morphology.remove_small_holes(mask, area_threshold=2000)
-        logger.debug("extract_mask_complex → rembg path")
+        mask    = morphology.remove_small_objects(mask, max_size=300)
+        mask    = morphology.remove_small_holes(mask, max_size=2000)
+        logger.info("Extracting foreground with REMBG (local U2Net model, no API key).")
         return mask, ""
     except ImportError:
         pass  # rembg not installed — continue to fallback
 
     # ── Felzenszwalb fallback ──────────────────────────────────────────────
-    logger.debug("extract_mask_complex → felzenszwalb fallback")
+    logger.warning(
+        "rembg is not installed — falling back to GRAPH-CUT (Felzenszwalb) "
+        "segmentation. Quality may be reduced for complex backgrounds. "
+        "Install rembg[cpu] for best results: pip install 'rembg[cpu]'"
+    )
     warning = (
         "Complex background detected. For best results install the 'rembg' "
         "package (pip install rembg) — it runs locally with no API key. "
@@ -184,9 +201,9 @@ def extract_mask_complex(
     fg_label = labels[np.argmax(counts)]
 
     mask = segments == fg_label
-    mask = morphology.binary_closing(mask, morphology.disk(5))
-    mask = morphology.remove_small_objects(mask, min_size=300)
-    mask = morphology.remove_small_holes(mask, area_threshold=2000)
+    mask = morphology.closing(mask, morphology.disk(5))
+    mask = morphology.remove_small_objects(mask, max_size=300)
+    mask = morphology.remove_small_holes(mask, max_size=2000)
 
     return mask, warning
 
@@ -219,18 +236,24 @@ def extract_foreground_mask(
     detected_mode     The mode that was actually used.
     warning           Non-empty string if quality may be reduced.
     """
+    requested = mode
     if mode == "auto":
         mode = classify_image(img)
+    else:
+        logger.info("Extraction mode forced to '%s' (not auto-detected).", mode)
 
     gray = np.array(img.convert("L"))
     rgb  = np.array(img.convert("RGB"))
     warning = ""
 
     if mode == "binary":
+        logger.info("Running extraction: BINARY threshold (luminance < %d).", threshold)
         mask = extract_mask_binary(gray, threshold=threshold)
     elif mode == "simple_bg":
+        logger.info("Running extraction: UNIFORM BACKGROUND colour-distance (ΔE threshold=%.1f).", delta_e_threshold)
         mask = extract_mask_simple_bg(rgb, delta_e_threshold=delta_e_threshold)
     else:  # complex
+        logger.info("Running extraction: COMPLEX — attempting rembg, with graph-cut fallback.")
         mask, warning = extract_mask_complex(rgb)
 
     return mask.astype(float), mode, warning
