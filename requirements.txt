@@ -11,3 +11,4 @@ uvicorn[standard]
 python-multipart
 pytest
 prometheus-client
+rembg[cpu]
