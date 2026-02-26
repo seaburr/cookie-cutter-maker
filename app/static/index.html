@@ -112,9 +112,9 @@
 <main>
   <div class="card step-grid">
     <div>
-      <h2>Step 1: Get an outline (PNG)</h2>
+      <h2>Step 1: Upload an image or use a prompt</h2>
       <div class="tabs">
-        <button class="tab active" id="tabPng" type="button">PNG Upload</button>
+        <button class="tab active" id="tabPng" type="button">Image Upload</button>
         <button class="tab" id="tabPrompt" type="button">Prompt (optional)</button>
       </div>
 
@@ -134,24 +134,34 @@
       <label>Name</label>
       <input id="name" class="short-input" type="text" value="cookie_cutter" />
 
-      <button id="btnStep1" class="secondary" type="button">Load outline (upload or prompt)</button>
+      <button id="btnStep1" class="secondary" type="button">Load image (upload or prompt)</button>
       <div id="step1Status" class="status"></div>
     </div>
     <div class="pane media">
-      <header>PNG</header>
+      <header>Image</header>
       <div class="content">
-        <div id="pngPreview" class="small">Step 1 will show your uploaded/generated PNG.</div>
+        <div id="pngPreview" class="small">Step 1 will show your uploaded or generated image.</div>
       </div>
     </div>
     <div class="pane text">
-      <header>Tips</header>
+      <header>Supported image types</header>
       <div class="content small">
-        <ul>
-          <li><b>Outline/clip-art:</b> black on white traces best.</li>
-          <li><b>Photo or illustration:</b> any image with a clear subject works — the pipeline detects the type automatically.</li>
-          <li>For complex backgrounds, install <code>rembg</code> (local, no API key) for the best quality.</li>
-          <li>Keep shapes simple; avoid thin lines.</li>
-        </ul>
+        <p style="margin:0 0 10px 0;">Accepts <b>PNG or JPG</b>. The pipeline detects the image type automatically and picks the best extraction method.</p>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <tr style="border-bottom:1px solid #1f2a37;">
+            <td style="padding:6px 4px;color:#e6edf3;font-weight:700;">Outlines &amp; clip-art</td>
+            <td style="padding:6px 4px;color:#9fb0c2;">Black on white, coloring-book style. Fastest — uses simple threshold.</td>
+          </tr>
+          <tr style="border-bottom:1px solid #1f2a37;">
+            <td style="padding:6px 4px;color:#e6edf3;font-weight:700;">Illustrations &amp; logos</td>
+            <td style="padding:6px 4px;color:#9fb0c2;">Subject on a solid or plain background. Uses colour-distance extraction.</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 4px;color:#e6edf3;font-weight:700;">Photos</td>
+            <td style="padding:6px 4px;color:#9fb0c2;">Any background. Uses local U2Net AI (no API key, runs offline).</td>
+          </tr>
+        </table>
+        <p style="margin:10px 0 0 0;color:#9fb0c2;">Keep shapes simple and avoid thin lines for best print results.</p>
       </div>
     </div>
   </div>
@@ -506,10 +516,10 @@
 
   $('btnStep1').onclick = async () => {
     try {
-      setStatus('Loading outline...');
-      setStepStatus('Loading outline...', 'info');
+      setStatus('Loading image...');
+      setStepStatus('Loading image...', 'info');
       setLinks(null);
-      $('pngPreview').innerHTML = '<span class="small">Loading PNG...</span>';
+      $('pngPreview').innerHTML = '<span class="small">Loading image...</span>';
       $('svgPreview').innerHTML = '<span class="small">Tracing...</span>';
 
       if (mode === 'png') {
