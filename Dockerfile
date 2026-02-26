@@ -6,8 +6,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
+# Install dependencies first so Docker can cache this layer independently
+# of application code changes.
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Pre-download the rembg U2Net model into the image so the first request
+# doesn't stall while the container fetches ~170 MB at runtime.
+# U2NET_HOME is set to a stable app-owned path rather than ~/.u2net so the
+# model works correctly regardless of which user the container runs as.
+ENV U2NET_HOME=/app/models
+RUN python -c "from rembg.sessions.u2net import U2netSession; U2netSession.download_models()"
 
 COPY . /app
 
