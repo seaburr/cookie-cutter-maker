@@ -90,9 +90,9 @@ async def _unhandled_error_handler(request: Request, exc: Exception):
 def index():
     return (STATIC_DIR / "index.html").read_text(encoding="utf-8")
 
-@app.get("/health")
-def health():
-    return {"ok": True}
+@app.get("/healthz", include_in_schema=False)
+def healthz():
+    return Response(content="OK", media_type="text/plain")
 
 def _new_job_dir() -> Path:
     job_id = uuid.uuid4().hex
