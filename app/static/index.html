@@ -494,7 +494,17 @@
   }
 
   async function postForm(url, formData) {
-    const res = await fetch(url, { method:'POST', body: formData });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    let res;
+    try {
+      res = await fetch(url, { method:'POST', body: formData, signal: controller.signal });
+    } catch (e) {
+      if (e.name === 'AbortError') throw new Error('Request timed out after 30 s. The server may be overloaded or unavailable.');
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
     const text = await res.text();
     let data;
     try { data = JSON.parse(text); } catch(e) { data = { detail: text }; }
