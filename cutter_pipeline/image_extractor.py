@@ -22,6 +22,7 @@ shape as the input image, ready for skimage.measure.find_contours.
 from __future__ import annotations
 
 import logging
+import os
 from typing import Literal
 
 import numpy as np
@@ -31,6 +32,24 @@ from skimage.color import rgb2lab
 from skimage.segmentation import felzenszwalb
 
 logger = logging.getLogger(__name__)
+
+_rembg_enabled_raw = os.environ.get("REMBG_ENABLED", "true").strip().lower()
+REMBG_ENABLED: bool = _rembg_enabled_raw not in ("false", "0", "no")
+if not REMBG_ENABLED:
+    logger.info("rembg is disabled via REMBG_ENABLED environment variable.")
+
+# Pre-load the U2Net session once at startup so the model is not reloaded from
+# disk on every request.  rembg.remove() creates a fresh session (and reloads
+# the ~170 MB ONNX model) on each call when no session is supplied — this is a
+# documented bottleneck acknowledged in the rembg README.
+_rembg_session = None
+if REMBG_ENABLED:
+    try:
+        from rembg import new_session as _rembg_new_session
+        _rembg_session = _rembg_new_session("u2net")
+        logger.info("rembg U2Net session initialised and model loaded into memory.")
+    except Exception as _e:
+        logger.warning("rembg session initialisation failed: %s", _e)
 
 ImageMode = Literal["binary", "simple_bg", "complex"]
 
@@ -163,32 +182,43 @@ def extract_mask_complex(
     success.
     """
     # ── Attempt rembg ──────────────────────────────────────────────────────
-    try:
-        from rembg import remove as _rembg_remove  # type: ignore
-        from PIL import Image as _PILImage
+    if not REMBG_ENABLED:
+        logger.info(
+            "rembg is disabled (REMBG_ENABLED=false) — skipping to graph-cut fallback."
+        )
+        warning = (
+            "rembg background removal is disabled. "
+            "Falling back to graph-cut segmentation which may be less accurate "
+            "for complex or photographic backgrounds."
+        )
+    else:
+        if _rembg_session is not None:
+            try:
+                from rembg import remove as _rembg_remove  # type: ignore
+                from PIL import Image as _PILImage
 
-        pil_in  = _PILImage.fromarray(rgb)
-        pil_out = _rembg_remove(pil_in)             # returns RGBA
-        alpha   = np.array(pil_out.split()[-1])     # A channel
-        mask    = alpha > 10                         # near-transparent = background
-        mask    = morphology.remove_small_objects(mask, max_size=300)
-        mask    = morphology.remove_small_holes(mask, max_size=2000)
-        logger.info("Extracting foreground with REMBG (local U2Net model, no API key).")
-        return mask, ""
-    except ImportError:
-        pass  # rembg not installed — continue to fallback
+                pil_in  = _PILImage.fromarray(rgb)
+                pil_out = _rembg_remove(pil_in, session=_rembg_session)  # reuses in-memory model
+                alpha   = np.array(pil_out.split()[-1])     # A channel
+                mask    = alpha > 10                         # near-transparent = background
+                mask    = morphology.remove_small_objects(mask, max_size=300)
+                mask    = morphology.remove_small_holes(mask, max_size=2000)
+                logger.info("Extracting foreground with REMBG (cached U2Net session).")
+                return mask, ""
+            except ImportError:
+                pass  # rembg not installed — continue to fallback
 
-    # ── Felzenszwalb fallback ──────────────────────────────────────────────
-    logger.warning(
-        "rembg is not installed — falling back to GRAPH-CUT (Felzenszwalb) "
-        "segmentation. Quality may be reduced for complex backgrounds. "
-        "Install rembg[cpu] for best results: pip install 'rembg[cpu]'"
-    )
-    warning = (
-        "Complex background detected. For best results install the 'rembg' "
-        "package (pip install rembg) — it runs locally with no API key. "
-        "Falling back to graph-cut segmentation which may be less accurate."
-    )
+        # ── Felzenszwalb fallback ──────────────────────────────────────────────
+        logger.warning(
+            "rembg is not installed — falling back to GRAPH-CUT (Felzenszwalb) "
+            "segmentation. Quality may be reduced for complex backgrounds. "
+            "Install rembg[cpu] for best results: pip install 'rembg[cpu]'"
+        )
+        warning = (
+            "Complex background detected. For best results install the 'rembg' "
+            "package (pip install rembg) — it runs locally with no API key. "
+            "Falling back to graph-cut segmentation which may be less accurate."
+        )
 
     segments = felzenszwalb(rgb, scale=scale, sigma=sigma, min_size=min_size)
 

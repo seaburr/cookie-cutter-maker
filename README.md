@@ -48,6 +48,56 @@ If you want prompt -> outline generation:
 1. Set `OPENAI_API_KEY` in your environment (or docker-compose.yml)
 2. Use the Prompt tab in the UI or `POST /pipeline/from-prompt`
 
+## Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `OPENAI_API_KEY` | _(unset)_ | Enables prompt-to-outline generation via the OpenAI Images API. If unset, the Prompt tab returns HTTP 402. |
+| `REMBG_ENABLED` | `true` | Set to `false` to disable rembg background removal for complex/photographic images. When disabled the pipeline falls back to graph-cut (Felzenszwalb) segmentation, which is faster but less accurate. Disable this if you are running on a memory-constrained instance — rembg loads a ~170 MB U2Net model into memory at startup. |
+| `PIPELINE_OUTPUT_DIR` | `output` | Directory where generated job files (PNG, SVG, STL, ZIP) are written. |
+
+## Infrastructure (Terraform / DigitalOcean App Platform)
+
+The `terraform/` directory contains configuration to deploy the app to [DigitalOcean App Platform](https://www.digitalocean.com/products/app-platform) at `cookies.seaburr.io`.
+
+**First-time setup:**
+
+```bash
+cd terraform
+terraform init
+terraform apply \
+  -var="do_token=<your-do-token>"
+```
+
+**With optional variables:**
+
+```bash
+terraform apply \
+  -var="do_token=<your-do-token>" \
+  -var="openai_api_key=<your-openai-key>" \
+  -var="rembg_enabled=true" \
+  -var="instance_size_slug=apps-s-1vcpu-1gb-fixed"
+```
+
+**Update existing infrastructure:**
+
+```bash
+cd terraform
+terraform apply -var="do_token=<your-do-token>"
+```
+
+Terraform will show a plan of changes before applying. Key variables:
+
+| Variable | Default | Description |
+|---|---|---|
+| `do_token` | _(required)_ | DigitalOcean personal access token. |
+| `image_tag` | `latest` | Docker image tag to deploy from GHCR. |
+| `region` | `nyc` | App Platform region (`nyc`, `ams`, `sfo`, `fra`, `lon`, `sgp`, `syd`, `tor`). |
+| `instance_size_slug` | `apps-s-1vcpu-1gb-fixed` | App Platform instance size. |
+| `instance_count` | `1` | Number of instances. |
+| `rembg_enabled` | `false` | Enable rembg background removal (see above). |
+| `openai_api_key` | _(unset)_ | Optional — enables prompt-to-outline generation. |
+
 ## CLI
 
 PNG input:
