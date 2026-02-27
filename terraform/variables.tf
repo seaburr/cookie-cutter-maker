@@ -13,7 +13,7 @@ variable "image_tag" {
 variable "region" {
   description = "DigitalOcean App Platform region slug (e.g. nyc, ams, sfo, fra, lon, sgp, syd, tor)."
   type        = string
-  default     = "nyc"
+  default     = "atl"
 }
 
 variable "instance_size_slug" {

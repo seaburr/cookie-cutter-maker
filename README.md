@@ -92,7 +92,7 @@ Terraform will show a plan of changes before applying. Key variables:
 |---|---|---|
 | `do_token` | _(required)_ | DigitalOcean personal access token. |
 | `image_tag` | `latest` | Docker image tag to deploy from GHCR. |
-| `region` | `nyc` | App Platform region (`nyc`, `ams`, `sfo`, `fra`, `lon`, `sgp`, `syd`, `tor`). |
+| `region` | `atl` | App Platform region (`atl`, `nyc`, `ams`, `sfo`, `fra`, `lon`, `sgp`, `syd`, `tor`). |
 | `instance_size_slug` | `apps-s-1vcpu-1gb-fixed` | App Platform instance size. |
 | `instance_count` | `1` | Number of instances. |
 | `rembg_enabled` | `false` | Enable rembg background removal (see above). |
