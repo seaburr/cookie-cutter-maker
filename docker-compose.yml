@@ -7,6 +7,8 @@ services:
       - "8000:8000"
     environment:
       PIPELINE_OUTPUT_DIR: /app/output
+      # Optional: require a passphrase to access the app
+      ACCESS_PASSWORD: ${ACCESS_PASSWORD:-}
       # Optional: enable prompt->outline generation
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     volumes:

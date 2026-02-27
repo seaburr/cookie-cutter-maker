@@ -42,6 +42,16 @@ resource "digitalocean_app" "cookie_cutter_maker" {
       }
 
       dynamic "env" {
+        for_each = var.access_password != "" ? [var.access_password] : []
+        content {
+          key   = "ACCESS_PASSWORD"
+          value = env.value
+          scope = "RUN_TIME"
+          type  = "SECRET"
+        }
+      }
+
+      dynamic "env" {
         for_each = var.openai_api_key != "" ? [var.openai_api_key] : []
         content {
           key   = "OPENAI_API_KEY"

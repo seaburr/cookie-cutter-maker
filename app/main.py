@@ -1,4 +1,7 @@
+import hashlib
+import hmac
 import os
+import secrets
 import sys
 import uuid
 import json
@@ -15,7 +18,7 @@ logging.basicConfig(
 )
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 import anyio
@@ -35,10 +38,78 @@ except Exception:
     HAS_OPENAI = False
 
 _log = logging.getLogger(__name__)
+
+# ── Access control ─────────────────────────────────────────────────────────────
+# Auth is enabled only when ACCESS_PASSWORD is set. If not set, the app is open.
+
+ACCESS_PASSWORD: str = os.environ.get("ACCESS_PASSWORD", "").strip()
+
+# Session signing secret — random per process group is fine because sessions are
+# only meaningful when ACCESS_PASSWORD is set, and in that case a fixed secret
+# derived from the password keeps all replicas in sync.
+_SESSION_SECRET: str = (
+    hashlib.sha256(f"ccm-session:{ACCESS_PASSWORD}".encode()).hexdigest()
+    if ACCESS_PASSWORD
+    else ""
+)
+
+_AUTH_EXEMPT = {"/login", "/logout", "/healthz", "/favicon.ico"}
+
+def _make_session_token() -> str:
+    nonce = secrets.token_hex(16)
+    sig = hmac.new(_SESSION_SECRET.encode(), nonce.encode(), hashlib.sha256).hexdigest()
+    return f"{nonce}.{sig}"
+
+def _verify_session_token(token: str) -> bool:
+    try:
+        nonce, sig = token.rsplit(".", 1)
+        expected = hmac.new(_SESSION_SECRET.encode(), nonce.encode(), hashlib.sha256).hexdigest()
+        return hmac.compare_digest(sig, expected)
+    except Exception:
+        return False
+
+def _login_page(error: str = "") -> str:
+    error_html = f'<p class="error">{error}</p>' if error else ""
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Cookie Cutter Maker — Login</title>
+  <link rel="icon" type="image/png" href="/favicon.ico"/>
+  <style>
+    *{{box-sizing:border-box;margin:0;padding:0}}
+    body{{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center}}
+    .card{{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:2rem;width:100%;max-width:360px}}
+    h1{{font-size:1.25rem;margin-bottom:.25rem}}
+    .sub{{font-size:.85rem;color:#94a3b8;margin-bottom:1.5rem}}
+    label{{display:block;font-size:.85rem;color:#94a3b8;margin-bottom:.4rem}}
+    input[type=password]{{width:100%;padding:.6rem .75rem;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#e2e8f0;font-size:1rem;margin-bottom:1rem}}
+    input[type=password]:focus{{outline:none;border-color:#6366f1}}
+    button{{width:100%;padding:.65rem;background:#6366f1;color:#fff;border:none;border-radius:6px;font-size:1rem;cursor:pointer}}
+    button:hover{{background:#4f46e5}}
+    .error{{color:#fca5a5;font-size:.85rem;margin-bottom:1rem}}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Cookie Cutter Maker</h1>
+    <p class="sub">Enter your passphrase to continue.</p>
+    {error_html}
+    <form method="POST" action="/login">
+      <label for="pw">Passphrase</label>
+      <input type="password" id="pw" name="password" autofocus autocomplete="current-password"/>
+      <button type="submit">Sign in</button>
+    </form>
+  </div>
+</body>
+</html>"""
+
 _log.info(
-    "Starting Cookie Cutter Maker — REMBG_ENABLED=%s OPENAI=%s",
+    "Starting Cookie Cutter Maker — REMBG_ENABLED=%s OPENAI=%s AUTH=%s",
     os.environ.get("REMBG_ENABLED", "unset (default true)"),
     "yes" if os.environ.get("OPENAI_API_KEY") else "no",
+    "enabled" if ACCESS_PASSWORD else "disabled (ACCESS_PASSWORD not set)",
 )
 
 app = FastAPI(title="Cookie Cutter Maker", version="0.2.0")
@@ -94,6 +165,20 @@ def metrics():
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
+@app.middleware("http")
+async def _auth_middleware(request: Request, call_next):
+    if not ACCESS_PASSWORD:
+        return await call_next(request)
+    if request.url.path in _AUTH_EXEMPT:
+        return await call_next(request)
+    token = request.cookies.get("session")
+    if not token or not _verify_session_token(token):
+        if request.method == "GET":
+            return RedirectResponse(url="/login", status_code=303)
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    return await call_next(request)
+
+
 @app.exception_handler(Exception)
 async def _unhandled_error_handler(request: Request, exc: Exception):
     """Return the real error message to the client while logging the stack."""
@@ -104,6 +189,30 @@ async def _unhandled_error_handler(request: Request, exc: Exception):
 @app.get("/", response_class=HTMLResponse)
 def index():
     return (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse(STATIC_DIR / "favicon.png", media_type="image/png")
+
+@app.get("/login", include_in_schema=False)
+def login_page():
+    return HTMLResponse(_login_page())
+
+@app.post("/login", include_in_schema=False)
+async def login_submit(request: Request, password: str = Form(default="")):
+    if password.strip() and hmac.compare_digest(password.strip(), ACCESS_PASSWORD):
+        token = _make_session_token()
+        response = RedirectResponse(url="/", status_code=303)
+        response.set_cookie("session", token, httponly=True, samesite="lax", max_age=60 * 60 * 24 * 7)
+        return response
+    error = "Incorrect passphrase. Please try again."
+    return HTMLResponse(_login_page(error=error), status_code=401)
+
+@app.get("/logout", include_in_schema=False)
+def logout():
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie("session")
+    return response
 
 @app.get("/healthz", include_in_schema=False)
 def healthz():

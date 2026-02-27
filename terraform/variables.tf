@@ -34,6 +34,13 @@ variable "rembg_enabled" {
   default     = "false"
 }
 
+variable "access_password" {
+  description = "Passphrase required to access the app. If unset, application will not prompt for credentials."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "openai_api_key" {
   description = "Optional OpenAI API key to enable prompt-to-outline generation."
   type        = string
