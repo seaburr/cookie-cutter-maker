@@ -6,6 +6,12 @@ import time
 from typing import Any
 from pathlib import Path
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+)
+
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -25,6 +31,13 @@ try:
     HAS_OPENAI = True
 except Exception:
     HAS_OPENAI = False
+
+_log = logging.getLogger(__name__)
+_log.info(
+    "Starting Cookie Cutter Maker — REMBG_ENABLED=%s OPENAI=%s",
+    os.environ.get("REMBG_ENABLED", "unset (default true)"),
+    "yes" if os.environ.get("OPENAI_API_KEY") else "no",
+)
 
 app = FastAPI(title="Cookie Cutter Maker", version="0.2.0")
 

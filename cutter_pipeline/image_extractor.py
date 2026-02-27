@@ -103,9 +103,10 @@ def classify_image(img: Image.Image) -> ImageMode:
 
     logger.info(
         "Image classified as COMPLEX / PHOTOGRAPHIC — corner pixel std=%.1f, "
-        "%.1f%% mid-tone pixels. Using rembg (U2Net) or graph-cut fallback.",
+        "%.1f%% mid-tone pixels. Extraction method: %s.",
         corner_std,
         mid_pct * 100,
+        "rembg (U2Net)" if REMBG_ENABLED else "graph-cut (rembg disabled)",
     )
     return "complex"
 
