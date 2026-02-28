@@ -100,6 +100,11 @@
     .stl-controls .row > div { flex: none; }
     .stl-controls input[type="range"] { height:6px; }
     .stl-controls label { margin-top: 6px; }
+    .feature-bar { display:flex; gap:14px; align-items:center; }
+    .feature { display:flex; align-items:center; gap:6px; font-size:12px; color:#9fb0c2; }
+    .feature-dot { width:8px; height:8px; border-radius:50%; background:#374151; flex-shrink:0; }
+    .feature-dot.on  { background:#22c55e; box-shadow:0 0 6px rgba(34,197,94,0.5); }
+    .feature-dot.off { background:#ef4444; }
   </style>
 </head>
 <body>
@@ -107,6 +112,10 @@
   <div>
     <div style="font-weight:900; font-size:20px;">Cookie Cutter Maker</div>
     <div class="small">Upload and prompt → Trace → Generate STL</div>
+  </div>
+  <div class="feature-bar" id="featureBar" style="visibility:hidden">
+    <div class="feature"><span class="feature-dot" id="dotBgRemoval"></span>Background Removal</div>
+    <div class="feature"><span class="feature-dot" id="dotImgGen"></span>Image Generation</div>
   </div>
 </header>
 
@@ -265,6 +274,13 @@
 
 </main>
 
+<script>
+  fetch('/features').then(r => r.json()).then(f => {
+    document.getElementById('dotBgRemoval').className = 'feature-dot ' + (f.background_removal ? 'on' : 'off');
+    document.getElementById('dotImgGen').className    = 'feature-dot ' + (f.image_generation   ? 'on' : 'off');
+    document.getElementById('featureBar').style.visibility = 'visible';
+  }).catch(() => {});
+</script>
 <script>
   // Lightweight STL viewer via Three.js + STLLoader.
   // Tries local copies in /static first; falls back to CDN if not present.

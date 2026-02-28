@@ -284,6 +284,12 @@ def extract_foreground_mask(
         logger.info("Running extraction: UNIFORM BACKGROUND colour-distance (ΔE threshold=%.1f).", delta_e_threshold)
         mask = extract_mask_simple_bg(rgb, delta_e_threshold=delta_e_threshold)
     else:  # complex
+        if not REMBG_ENABLED:
+            raise ValueError(
+                "This image has a complex or photographic background that requires "
+                "Background Removal, which is currently disabled. "
+                "Try an image with a plain or uniform background instead."
+            )
         logger.info("Running extraction: COMPLEX — attempting rembg, with graph-cut fallback.")
         mask, warning = extract_mask_complex(rgb)
 

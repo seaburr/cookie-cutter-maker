@@ -179,6 +179,10 @@ async def _auth_middleware(request: Request, call_next):
     return await call_next(request)
 
 
+@app.exception_handler(ValueError)
+async def _value_error_handler(request: Request, exc: ValueError):
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
 @app.exception_handler(Exception)
 async def _unhandled_error_handler(request: Request, exc: Exception):
     """Return the real error message to the client while logging the stack."""
@@ -217,6 +221,14 @@ def logout():
 @app.get("/healthz", include_in_schema=False)
 def healthz():
     return Response(content="OK", media_type="text/plain")
+
+@app.get("/features", include_in_schema=False)
+def features():
+    from cutter_pipeline.image_extractor import REMBG_ENABLED
+    return {
+        "background_removal": REMBG_ENABLED,
+        "image_generation": bool(os.environ.get("OPENAI_API_KEY")),
+    }
 
 def _new_job_dir() -> Path:
     job_id = uuid.uuid4().hex
