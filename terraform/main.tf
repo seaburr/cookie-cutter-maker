@@ -20,6 +20,9 @@ resource "digitalocean_app" "cookie_cutter_maker" {
         registry             = "seaburr"
         repository           = "cookie-cutter-maker"
         tag                  = var.image_tag
+        deploy_on_push {
+          enabled = true
+        }
       }
 
       health_check {

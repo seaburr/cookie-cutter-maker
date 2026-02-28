@@ -81,3 +81,29 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    needs: [tag, build-and-push]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        working-directory: terraform
+        env:
+          TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+        run: terraform init
+
+      - name: Terraform apply
+        working-directory: terraform
+        env:
+          TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+        run: |
+          terraform apply -auto-approve \
+            -var="do_token=${{ secrets.DO_TOKEN }}" \
+            -var="image_tag=${{ needs.tag.outputs.new_tag }}" \
+            -var="access_password=${{ secrets.ACCESS_PASSWORD }}" \
+            -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}"
