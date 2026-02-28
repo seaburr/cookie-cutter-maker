@@ -17,9 +17,9 @@
     .card { background: linear-gradient(145deg, #101a2b, #0c121a); border: 1px solid #22344b; border-radius: 16px; padding: 18px; box-shadow: 0 18px 46px rgba(0,0,0,0.42); }
     h2 { margin: 0 0 12px 0; font-size: 18px; font-weight:800; letter-spacing: 0.2px; }
     label { display:block; font-size: 12px; color:#9fb0c2; margin-top: 12px; margin-bottom:6px; letter-spacing: 0.1px; }
-    input[type="text"], textarea { width:100%; background:#0b0f14; border:1px solid #243244; color:#e6edf3; border-radius:12px; padding:12px; }
+    input[type="text"], textarea { width:100%; background:#0b0f14; border:1px solid #243244; color:#e6edf3; border-radius:12px; padding:12px; box-sizing:border-box; }
     .short-input { width:80%; max-width:420px; }
-    input[type="file"] { width:100%; color:#e6edf3; background:#0b0f14; border:1px solid #243244; border-radius:12px; padding:12px; cursor:pointer; }
+    input[type="file"] { width:100%; color:#e6edf3; background:#0b0f14; border:1px solid #243244; border-radius:12px; padding:12px; cursor:pointer; box-sizing:border-box; }
     input[type="file"]::file-selector-button { background:#223043; color:#e6edf3; border:0; border-radius:10px; padding:10px 14px; margin-right:12px; cursor:pointer; font-weight:700; }
     input[type="file"]::file-selector-button:hover { background:#1f6feb; }
     .row { display:flex; gap:10px; }
@@ -105,6 +105,21 @@
     .feature-dot { width:8px; height:8px; border-radius:50%; background:#374151; flex-shrink:0; }
     .feature-dot.on  { background:#22c55e; box-shadow:0 0 6px rgba(34,197,94,0.5); }
     .feature-dot.off { background:#ef4444; }
+
+    @media (max-width: 768px) {
+      header { padding: 12px 16px; flex-wrap: wrap; gap: 10px; }
+      main { padding: 10px; gap: 16px; }
+      .card { padding: 14px; border-radius: 12px; }
+      h2 { font-size: 16px; }
+      .short-input { width: 100%; max-width: none; }
+      .step-grid { grid-template-columns: 1fr; }
+      .step3-grid { grid-template-columns: 1fr; }
+      .preview { grid-template-columns: 1fr; }
+      .pane { min-height: unset; }
+      .pane .content { min-height: unset; padding: 12px; }
+      #stlCanvas { min-height: 260px; height: clamp(260px, 80vw, 420px); }
+      #pngPreview, #svgPreview { max-width: 100%; }
+    }
   </style>
 </head>
 <body>
