@@ -9,6 +9,8 @@ services:
       PIPELINE_OUTPUT_DIR: /app/output
       # Optional: require a passphrase to access the app
       ACCESS_PASSWORD: ${ACCESS_PASSWORD:-}
+      # Required for stable sessions when ACCESS_PASSWORD is set
+      SESSION_SECRET: ${SESSION_SECRET:-}
       # Optional: enable prompt->outline generation
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     volumes:

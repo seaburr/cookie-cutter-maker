@@ -47,3 +47,10 @@ variable "openai_api_key" {
   sensitive   = true
   default     = ""
 }
+
+variable "session_secret" {
+  description = "Secret used to sign session cookies. Required for stable sessions across replicas and restarts. Generate with: openssl rand -hex 32"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

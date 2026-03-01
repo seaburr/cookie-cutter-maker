@@ -63,6 +63,16 @@ resource "digitalocean_app" "cookie_cutter_maker" {
           type  = "SECRET"
         }
       }
+
+      dynamic "env" {
+        for_each = var.session_secret != "" ? [var.session_secret] : []
+        content {
+          key   = "SESSION_SECRET"
+          value = env.value
+          scope = "RUN_TIME"
+          type  = "SECRET"
+        }
+      }
     }
   }
 }

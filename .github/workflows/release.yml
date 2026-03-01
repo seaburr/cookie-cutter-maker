@@ -106,4 +106,5 @@ jobs:
             -var="do_token=${{ secrets.DO_TOKEN }}" \
             -var="image_tag=${{ needs.tag.outputs.new_tag }}" \
             -var="access_password=${{ secrets.ACCESS_PASSWORD }}" \
-            -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}"
+            -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
+            -var="session_secret=${{ secrets.SESSION_SECRET }}"

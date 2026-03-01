@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import hmac
 import os
@@ -44,14 +45,19 @@ _log = logging.getLogger(__name__)
 
 ACCESS_PASSWORD: str = os.environ.get("ACCESS_PASSWORD", "").strip()
 
-# Session signing secret — random per process group is fine because sessions are
-# only meaningful when ACCESS_PASSWORD is set, and in that case a fixed secret
-# derived from the password keeps all replicas in sync.
-_SESSION_SECRET: str = (
-    hashlib.sha256(f"ccm-session:{ACCESS_PASSWORD}".encode()).hexdigest()
-    if ACCESS_PASSWORD
-    else ""
-)
+# Session signing secret — independent of the password.
+# Prefer SESSION_SECRET env var (required for stable sessions across replicas/restarts).
+# Falls back to a random value: sessions will be invalidated on every restart.
+_SESSION_SECRET: str = ""
+if ACCESS_PASSWORD:
+    _SESSION_SECRET = os.environ.get("SESSION_SECRET", "").strip()
+    if not _SESSION_SECRET:
+        _SESSION_SECRET = secrets.token_hex(32)
+        _log.warning(
+            "SESSION_SECRET env var not set — using a randomly generated secret. "
+            "Sessions will be invalidated on restart and will not work across "
+            "multiple replicas. Set SESSION_SECRET for stable sessions."
+        )
 
 _AUTH_EXEMPT = {"/login", "/logout", "/healthz", "/favicon.ico"}
 
@@ -207,8 +213,9 @@ async def login_submit(request: Request, password: str = Form(default="")):
     if password.strip() and hmac.compare_digest(password.strip(), ACCESS_PASSWORD):
         token = _make_session_token()
         response = RedirectResponse(url="/", status_code=303)
-        response.set_cookie("session", token, httponly=True, samesite="lax", max_age=60 * 60 * 24 * 7)
+        response.set_cookie("session", token, httponly=True, samesite="lax", secure=True, max_age=60 * 60 * 24 * 7)
         return response
+    await asyncio.sleep(1)  # slow down brute-force attempts
     error = "Incorrect passphrase. Please try again."
     return HTMLResponse(_login_page(error=error), status_code=401)
 
