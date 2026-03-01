@@ -24,6 +24,7 @@ from fastapi.staticfiles import StaticFiles
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 import anyio
 
+from PIL import Image as _PILImage
 from cutter_pipeline.trace_outline import trace_png_to_polygon
 from cutter_pipeline.stl_cutter import polygon_to_cookie_cutter_stl
 from shapely.geometry import shape, mapping
@@ -277,6 +278,14 @@ def _find_png(job_dir: Path, name: str) -> Path:
     raise HTTPException(status_code=404, detail="PNG not found for this job. Upload or generate first.")
 
 
+def _log_image_upload(filename: str, content: bytes, path: Path) -> None:
+    try:
+        with _PILImage.open(path) as img:
+            w, h = img.size
+        _log.info("Image upload — file=%r size=%.1fKB dimensions=%dx%d", filename, len(content) / 1024, w, h)
+    except Exception:
+        _log.info("Image upload — file=%r size=%.1fKB", filename, len(content) / 1024)
+
 def _openai_detail(exc: OpenAIError) -> str:
     """Prefer the nested OpenAI error message if available."""
     # Newer openai client exposes .body with {'error': {'message': ...}}
@@ -307,7 +316,9 @@ async def trace_from_png(
     png_path = job_dir / f"{name}.png"
     svg_path = job_dir / f"{name}.svg"
 
-    png_path.write_bytes(await file.read())
+    content = await file.read()
+    png_path.write_bytes(content)
+    _log_image_upload(file.filename, content, png_path)
     traced = trace_png_to_polygon(
         str(png_path),
         str(svg_path),
@@ -356,7 +367,9 @@ async def pipeline_from_png(
     svg_path = job_dir / f"{name}.svg"
     stl_path = job_dir / f"{name}.stl"
 
-    png_path.write_bytes(await file.read())
+    content = await file.read()
+    png_path.write_bytes(content)
+    _log_image_upload(file.filename, content, png_path)
     traced = trace_png_to_polygon(
         str(png_path),
         str(svg_path),
@@ -411,11 +424,15 @@ async def pipeline_from_prompt(
     min_component_area_mm2: float = Form(25.0),
     smooth_radius: float = Form(1.0),
 ):
+    if len(prompt) > 1000:
+        raise HTTPException(status_code=400, detail="Prompt must be 1000 characters or fewer.")
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         raise HTTPException(status_code=402, detail="OPENAI_API_KEY not set. Use /pipeline/from-png for offline mode.")
     if not HAS_OPENAI:
         raise HTTPException(status_code=500, detail="OpenAI image step unavailable.")
+
+    _log.info("Prompt (pipeline) — %r", prompt.strip()[:500])
 
     job_dir = _new_job_dir()
     png_path = job_dir / f"{name}.png"
@@ -477,11 +494,15 @@ async def outline_from_prompt(
     name: str = Form("cookie_cutter"),
     smooth_radius: float = Form(1.0),
 ):
+    if len(prompt) > 1000:
+        raise HTTPException(status_code=400, detail="Prompt must be 1000 characters or fewer.")
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         raise HTTPException(status_code=402, detail="OPENAI_API_KEY not set. Cannot generate prompt image.")
     if not HAS_OPENAI:
         raise HTTPException(status_code=500, detail="OpenAI image step unavailable.")
+
+    _log.info("Prompt (outline) — %r", prompt.strip()[:500])
 
     job_dir = _new_job_dir()
     png_path = job_dir / f"{name}.png"
