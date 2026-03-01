@@ -19,7 +19,7 @@ variable "region" {
 variable "instance_size_slug" {
   description = "App Platform instance size slug."
   type        = string
-  default     = "apps-s-1vcpu-1gb-fixed"
+  default     = "apps-s-1vcpu-0.5gb"
 }
 
 variable "instance_count" {
