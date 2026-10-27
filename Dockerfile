@@ -1,15 +1,24 @@
 FROM python:3.13-slim
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+# Run as a non-root user (required by PicoPaaS). Directories the app writes to
+# are created up front and owned by that user; creating them here (rather than
+# running chown -R over /app later) avoids duplicating large layers.
+RUN mkdir -p /app/output /app/models /app/.cache/numba \
+    && chown -R 10001:10001 /app
 
 WORKDIR /app
 
 # Install dependencies first so Docker can cache this layer independently
-# of application code changes.
+# of application code changes. All dependencies ship manylinux wheels, so no
+# compiler toolchain is needed in the image.
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
+
+USER 10001
+
+# numba (used by pymatting/rembg) must cache compiled functions somewhere
+# writable; site-packages is root-owned, so use an app-owned directory.
+ENV NUMBA_CACHE_DIR=/app/.cache/numba
 
 # Pre-download the rembg U2Net model into the image so the first request
 # doesn't stall while the container fetches ~170 MB at runtime.
@@ -18,16 +27,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 ENV U2NET_HOME=/app/models
 RUN python -c "from rembg.sessions.u2net import U2netSession; U2netSession.download_models()"
 
-COPY . /app
-
-# Run as a non-root user (required by PicoPaaS). Own /app so the model cache
-# and the pipeline output directory stay readable and writable.
-RUN mkdir -p /app/output /app/.cache/numba && chown -R 10001:10001 /app
-USER 10001
-
-# numba (used by pymatting/rembg) must cache compiled functions somewhere
-# writable; site-packages is root-owned, so use an app-owned directory.
-ENV NUMBA_CACHE_DIR=/app/.cache/numba
+COPY --chown=10001:10001 . /app
 
 EXPOSE 8000
 # Allow configurable worker count via UVICORN_WORKERS (default 2).

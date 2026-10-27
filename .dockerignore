@@ -1,0 +1,13 @@
+.git
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+output
+terraform
+tests
+NextSteps.md
+Makefile
+docker-compose.yml
+Dockerfile
+.dockerignore
