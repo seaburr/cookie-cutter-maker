@@ -525,14 +525,26 @@
     updatePreviews(obj);
   }
 
+  // Per-endpoint budgets (ms). Image generation calls out to OpenAI and then
+  // still has to run background removal + tracing, so it needs far more room
+  // than the local-only steps.
+  const TIMEOUTS = {
+    '/outline/from-prompt': 180000,
+    '/trace/from-png': 120000,
+    '/trace/from-job': 60000,
+    '/stl/from-job': 120000,
+  };
+  const DEFAULT_TIMEOUT = 60000;
+
   async function postForm(url, formData) {
+    const timeoutMs = TIMEOUTS[url] ?? DEFAULT_TIMEOUT;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 30000);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     let res;
     try {
       res = await fetch(url, { method:'POST', body: formData, signal: controller.signal });
     } catch (e) {
-      if (e.name === 'AbortError') throw new Error('Request timed out after 30 s. The server may be overloaded or unavailable.');
+      if (e.name === 'AbortError') throw new Error(`Request timed out after ${Math.round(timeoutMs / 1000)} s. The server may still be working — check the job output before retrying.`);
       throw e;
     } finally {
       clearTimeout(timer);
