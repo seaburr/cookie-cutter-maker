@@ -20,6 +20,15 @@ RUN python -c "from rembg.sessions.u2net import U2netSession; U2netSession.downl
 
 COPY . /app
 
+# Run as a non-root user (required by PicoPaaS). Own /app so the model cache
+# and the pipeline output directory stay readable and writable.
+RUN mkdir -p /app/output /app/.cache/numba && chown -R 10001:10001 /app
+USER 10001
+
+# numba (used by pymatting/rembg) must cache compiled functions somewhere
+# writable; site-packages is root-owned, so use an app-owned directory.
+ENV NUMBA_CACHE_DIR=/app/.cache/numba
+
 EXPOSE 8000
 # Allow configurable worker count via UVICORN_WORKERS (default 2).
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-2}"]
